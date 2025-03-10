@@ -1,2 +1,14 @@
-package com.example.HandTalk.dto;public class UserRequestDto {
+package com.example.HandTalk.dto;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+public class UserRequestDto {
+    private String name;
+    private String email;
+    private String password;
 }

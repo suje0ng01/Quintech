@@ -1,21 +1,22 @@
 package com.example.HandTalk.controller;
 
+import com.example.HandTalk.dto.UserRequestDto;
+import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.service.UserService;
-import com.example.HandTalk.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@RestController // ✅ 여기 확인!
-@RequiredArgsConstructor
+@RestController
 @RequestMapping("/api/user")
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerUser(@RequestBody User user) { // ✅ @RequestBody 추가
-        User savedUser = userService.registerUser(user.getName(), user.getEmail(), user.getPassword());
+    public ResponseEntity<UserResponseDto> registerUser(@RequestBody UserRequestDto userRequestDto) {
+        UserResponseDto savedUser = userService.registerUser(userRequestDto);
         return ResponseEntity.ok(savedUser);
     }
 }

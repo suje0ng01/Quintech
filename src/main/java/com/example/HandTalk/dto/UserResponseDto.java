@@ -1,2 +1,17 @@
-package com.example.HandTalk.dto;public class UserResponseDto {
+package com.example.HandTalk.dto;
+
+import com.example.HandTalk.user.User;
+import lombok.Getter;
+
+@Getter
+public class UserResponseDto {
+    private Long id;
+    private String name;
+    private String email;
+
+    public UserResponseDto(User user) {
+        this.id = user.getId();
+        this.name = user.getName();
+        this.email = user.getEmail();
+    }
 }
