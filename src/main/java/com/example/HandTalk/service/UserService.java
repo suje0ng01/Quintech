@@ -3,6 +3,7 @@ package com.example.HandTalk.service;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.repository.UserRepository;
+import com.example.HandTalk.user.Role;
 import com.example.HandTalk.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class UserService {
         user.setName(userRequestDto.getName());
         user.setEmail(userRequestDto.getEmail());
         user.setPassword(encodedPassword);
+        user.setRole(Role.USER);
 
         User savedUser = userRepository.save(user);
         return new UserResponseDto(savedUser);

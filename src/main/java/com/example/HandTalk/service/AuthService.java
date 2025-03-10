@@ -4,27 +4,37 @@ import com.example.HandTalk.dto.LoginRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.user.User;
+import com.example.HandTalk.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public UserResponseDto login(LoginRequestDto loginRequest) {
-        User user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일이 존재하지 않습니다."));
+    public UserResponseDto login(LoginRequestDto requestDto) {
+        // Spring Security 인증 (ID & PW 체크)
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword())
+        );
 
-        // ✅ 비밀번호 검증
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 올바르지 않습니다.");
-        }
+        // 사용자 정보 가져오기
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        return new UserResponseDto(user); // 로그인 성공 시 DTO 반환
+        // ✅ JWT 생성 (email & role 포함)
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+
+        // ✅ JWT 포함한 UserResponseDto 반환
+        return new UserResponseDto(user, token);
     }
 }

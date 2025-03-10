@@ -40,6 +40,10 @@ public class User {
     @Column(nullable = false)
     private OAuthType oAuthType = OAuthType.NONE;
 
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+
     // OAuth2 로그인 제공자 (ex: "google")
     @Column(nullable = true, length = 50)
     private String provider;
