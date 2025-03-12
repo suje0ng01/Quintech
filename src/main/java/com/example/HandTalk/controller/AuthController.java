@@ -6,7 +6,7 @@ import com.example.HandTalk.dto.LoginResponseDto;
 import com.example.HandTalk.dto.Oauth2GoogleDto;
 import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.service.OAuthService;
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

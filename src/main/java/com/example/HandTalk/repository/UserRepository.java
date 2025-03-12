@@ -1,6 +1,6 @@
 package com.example.HandTalk.repository;
 
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

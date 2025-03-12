@@ -2,7 +2,7 @@ package com.example.HandTalk.service;
 
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.repository.UserRepository;
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

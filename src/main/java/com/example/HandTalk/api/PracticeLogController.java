@@ -2,8 +2,8 @@ package com.example.HandTalk.api;
 
 
 import com.example.HandTalk.service.PracticeLogService;
-import com.example.HandTalk.user.PoseData;
-import com.example.HandTalk.user.PracticeLog;
+import com.example.HandTalk.domain.PoseData;
+import com.example.HandTalk.domain.PracticeLog;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

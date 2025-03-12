@@ -1,7 +1,7 @@
 package com.example.HandTalk.service;
 
 import com.example.HandTalk.repository.UserRepository;
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

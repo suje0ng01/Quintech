@@ -1,6 +1,6 @@
 package com.example.HandTalk.config;
 
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

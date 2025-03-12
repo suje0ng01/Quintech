@@ -3,7 +3,7 @@ package com.example.HandTalk.service;
 import com.example.HandTalk.dto.LoginRequestDto;
 import com.example.HandTalk.dto.LoginResponseDto;
 import com.example.HandTalk.repository.UserRepository;
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import com.example.HandTalk.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;

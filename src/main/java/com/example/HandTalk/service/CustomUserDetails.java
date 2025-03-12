@@ -1,6 +1,6 @@
 package com.example.HandTalk.service;
 
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

@@ -1,6 +1,6 @@
 package com.example.HandTalk.dto;
 
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

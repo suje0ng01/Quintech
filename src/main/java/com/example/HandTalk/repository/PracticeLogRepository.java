@@ -1,7 +1,7 @@
 package com.example.HandTalk.repository;
 
 
-import com.example.HandTalk.user.PracticeLog;
+import com.example.HandTalk.domain.PracticeLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

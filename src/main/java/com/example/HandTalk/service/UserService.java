@@ -3,14 +3,13 @@ package com.example.HandTalk.service;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.repository.UserRepository;
-import com.example.HandTalk.user.Role;
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.Role;
+import com.example.HandTalk.domain.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service

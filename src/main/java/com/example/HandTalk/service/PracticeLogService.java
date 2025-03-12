@@ -3,8 +3,8 @@ package com.example.HandTalk.service;
 
 import com.example.HandTalk.repository.PoseDataRepository;
 import com.example.HandTalk.repository.PracticeLogRepository;
-import com.example.HandTalk.user.PoseData;
-import com.example.HandTalk.user.PracticeLog;
+import com.example.HandTalk.domain.PoseData;
+import com.example.HandTalk.domain.PracticeLog;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 

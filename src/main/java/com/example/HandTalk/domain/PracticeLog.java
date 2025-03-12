@@ -1,7 +1,5 @@
-package com.example.HandTalk.user;
+package com.example.HandTalk.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.vladmihalcea.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Table;
@@ -11,7 +9,6 @@ import org.hibernate.annotations.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Entity
 @Getter

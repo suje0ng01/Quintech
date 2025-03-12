@@ -1,4 +1,4 @@
-package com.example.HandTalk.user;
+package com.example.HandTalk.domain;
 
 public enum OAuthType {
 

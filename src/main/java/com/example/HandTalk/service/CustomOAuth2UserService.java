@@ -2,9 +2,9 @@ package com.example.HandTalk.service;
 
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.repository.UserRepository;
-import com.example.HandTalk.user.OAuthType;
-import com.example.HandTalk.user.Role;
-import com.example.HandTalk.user.User;
+import com.example.HandTalk.domain.OAuthType;
+import com.example.HandTalk.domain.Role;
+import com.example.HandTalk.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
