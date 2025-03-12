@@ -4,8 +4,27 @@
     <title>로그인 성공</title>
     <meta charset="UTF-8">
     <script>
-        function getTokenInfo() {
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get("token");
+        }
+
+        function saveToken() {
             let token = localStorage.getItem("jwtToken");
+
+            // ✅ URL에서 토큰 가져와 저장
+            if (!token) {
+                token = getTokenFromUrl();
+                if (token) {
+                    localStorage.setItem("jwtToken", token);
+                }
+            }
+
+            return token;
+        }
+
+        function getTokenInfo() {
+            let token = saveToken();
 
             if (!token) {
                 alert("로그인이 필요합니다.");
@@ -44,4 +63,3 @@
 <button onclick="logout()">로그아웃</button>
 </body>
 </html>
-

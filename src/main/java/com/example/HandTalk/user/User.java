@@ -29,7 +29,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 50) // 이메일은 유니크하게 설정
     private String email;
 
-    @NotEmpty
+
     @Column(nullable = true, length = 255) // 비밀번호는 해싱되므로 길이 여유롭게 설정
     private String password;
 
