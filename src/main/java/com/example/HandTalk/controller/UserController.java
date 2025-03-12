@@ -1,9 +1,13 @@
 package com.example.HandTalk.controller;
 
+import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.service.UserService;
+import io.jsonwebtoken.Claims;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,10 +17,32 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
+    // ✅ 회원가입 API
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDto> registerUser(@RequestBody UserRequestDto userRequestDto) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequestDto userRequestDto) {
         UserResponseDto savedUser = userService.registerUser(userRequestDto);
-        return ResponseEntity.ok(savedUser);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
+
+    //✅사용자 조회 api
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 필요합니다.");
+        }
+
+        String token = authHeader.substring(7); // "Bearer " 제거
+        Claims claims = jwtUtil.parseToken(token);
+        String email = claims.getSubject(); // JWT에서 email 추출
+
+        // DB에서 유저 정보 가져오기
+        UserResponseDto userResponse = userService.getUserByEmail(email);
+
+        return ResponseEntity.ok(userResponse);
+    }
+
+
 }

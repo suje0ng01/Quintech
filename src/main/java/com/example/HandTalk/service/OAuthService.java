@@ -1,7 +1,7 @@
 package com.example.HandTalk.service;
 
 import com.example.HandTalk.dto.LoginRequestDto;
-import com.example.HandTalk.dto.UserResponseDto;
+import com.example.HandTalk.dto.LoginResponseDto;
 import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.user.User;
 import com.example.HandTalk.config.JwtUtil;
@@ -14,13 +14,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class OAuthService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    public UserResponseDto login(LoginRequestDto requestDto) {
+    public LoginResponseDto login(LoginRequestDto requestDto) {
         // Spring Security 인증 (ID & PW 체크)
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword())
@@ -35,6 +35,6 @@ public class AuthService {
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
         // ✅ JWT 포함한 UserResponseDto 반환
-        return new UserResponseDto(user, token);
+        return new LoginResponseDto(user,token);
     }
 }
