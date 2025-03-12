@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>로그인 성공</title>
+    <meta charset="UTF-8">
+    <script>
+        function getTokenInfo() {
+            let token = localStorage.getItem("jwtToken");
+
+            if (!token) {
+                alert("로그인이 필요합니다.");
+                window.location.href = "/login";
+                return;
+            }
+
+            fetch("/auth/test", {
+                method: "GET",
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("tokenInfo").innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(error => {
+                    alert("토큰 인증 실패. 다시 로그인하세요.");
+                    localStorage.removeItem("jwtToken");
+                    window.location.href = "/login";
+                });
+        }
+
+        function logout() {
+            localStorage.removeItem("jwtToken");
+            alert("로그아웃 되었습니다.");
+            window.location.href = "/login";
+        }
+    </script>
+</head>
+<body onload="getTokenInfo()">
+<h2>로그인 성공 🎉</h2>
+<h3>JWT 정보</h3>
+<pre id="tokenInfo"></pre>
+<button onclick="logout()">로그아웃</button>
+</body>
+</html>
+

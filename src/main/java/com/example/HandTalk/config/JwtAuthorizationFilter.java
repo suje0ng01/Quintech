@@ -42,6 +42,9 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         String token = authorizationHeader.substring(7);
 
         try {
+            if (!jwtUtil.validateToken(token)) {
+                throw new RuntimeException("유효하지 않은 JWT입니다.");
+            }
             // 3. 토큰 검증 및 정보 파싱
             Claims claims = jwtUtil.parseToken(token);
             String email = claims.getSubject();          // 표준 클레임: sub → email
