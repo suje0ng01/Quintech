@@ -3,6 +3,7 @@ package com.example.HandTalk.controller;
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
+import com.example.HandTalk.dto.UserUpdateRequestDto;
 import com.example.HandTalk.service.UserService;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
@@ -28,7 +29,7 @@ public class UserController {
 
     //✅사용자 조회 api
 
-    @GetMapping("/me")
+    @GetMapping("/check")
     public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 필요합니다.");
@@ -43,6 +44,24 @@ public class UserController {
 
         return ResponseEntity.ok(userResponse);
     }
+    @PutMapping("/update")
+    public ResponseEntity<UserResponseDto> updateUserProfile(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody UserUpdateRequestDto updateRequest) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
+
+        String token = authHeader.substring(7);
+        Claims claims = jwtUtil.parseToken(token);
+        String email = claims.getSubject();
+
+        UserResponseDto updatedUser = userService.updateUserProfile(email, updateRequest);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+
 
 
 }

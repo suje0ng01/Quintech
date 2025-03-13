@@ -2,6 +2,7 @@ package com.example.HandTalk.service;
 
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
+import com.example.HandTalk.dto.UserUpdateRequestDto;
 import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.domain.Role;
 import com.example.HandTalk.domain.User;
@@ -61,6 +62,23 @@ public class UserService {
     public UserResponseDto getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        return new UserResponseDto(user);
+    }
+
+    // ✅ 사용자 정보 수정 (닉네임 변경)
+    public UserResponseDto updateUserProfile(String email, UserUpdateRequestDto updateRequest) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+
+        // 닉네임 중복 검사
+        if (userRepository.existsByNickname(updateRequest.getNickname())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 닉네임입니다.");
+        }
+
+        // 닉네임 변경
+        user.setNickname(updateRequest.getNickname());
+        userRepository.save(user);
 
         return new UserResponseDto(user);
     }
