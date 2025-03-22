@@ -5,6 +5,7 @@ import com.example.HandTalk.dto.LoginRequestDto;
 import com.example.HandTalk.dto.LoginResponseDto;
 import com.example.HandTalk.dto.Oauth2GoogleDto;
 import com.example.HandTalk.repository.UserRepository;
+import com.example.HandTalk.service.CheckInService;
 import com.example.HandTalk.service.OAuthService;
 import com.example.HandTalk.domain.User;
 import io.jsonwebtoken.Claims;
@@ -20,19 +21,22 @@ public class AuthController {
     private final OAuthService authService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-
+    private final CheckInService checkInService;
 
     // ✅ 로그인하는 api(jwt반환)
-
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto requestDto) {
-        return ResponseEntity.ok(authService.login(requestDto));
+        LoginResponseDto response = authService.login(requestDto);
+
+        // ✅ 자동 출석 체크
+        User user = userRepository.findByEmail(response.getEmail())
+                .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
+        checkInService.checkIn(user);
+
+        return ResponseEntity.ok(response);
     }
 
-
-
     // ✅ 구글 로그인 후 jwt반환 api
-    //사용자 정보도반환 --> 나중필요시 jwt토큰만 반환하는 api 개발 가능
     @GetMapping("/oauth/google/info")
     public ResponseEntity<LoginResponseDto> getGoogleJwtToken(@RequestParam String email) {
         User user = userRepository.findByEmail(email)
@@ -40,8 +44,12 @@ public class AuthController {
 
         String jwtToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
-        return ResponseEntity.ok(new LoginResponseDto(user, jwtToken)); // ✅ 사용자 정보와 JWT 함께 반환
+        // ✅ 자동 출석 체크
+        checkInService.checkIn(user);
+
+        return ResponseEntity.ok(new LoginResponseDto(user, jwtToken));
     }
+
     // ✅ 구글 로그인 후 JWT 토큰만 반환 API (추가)
     @GetMapping("/oauth/google/jwt")
     public ResponseEntity<Oauth2GoogleDto> getGoogleJwtOnly(@RequestParam String email) {
@@ -50,9 +58,11 @@ public class AuthController {
 
         String jwtToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
-        return ResponseEntity.ok(new Oauth2GoogleDto(jwtToken)); // ✅ JWT 토큰만 반환
-    }
+        // ✅ 자동 출석 체크
+        checkInService.checkIn(user);
 
+        return ResponseEntity.ok(new Oauth2GoogleDto(jwtToken));
+    }
 
     //✅ 일반로그인시 jwt인증 테스트용도 api
     @GetMapping("/test")

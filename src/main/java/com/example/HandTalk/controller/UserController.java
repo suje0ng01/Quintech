@@ -3,6 +3,7 @@ package com.example.HandTalk.controller;
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
+import com.example.HandTalk.dto.UserUpdateRequestDto;
 import com.example.HandTalk.service.UserService;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
@@ -10,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
@@ -30,7 +29,7 @@ public class UserController {
 
     //✅사용자 조회 api
 
-    @GetMapping("/inquiry")
+    @GetMapping("/check")
     public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 필요합니다.");
@@ -47,43 +46,24 @@ public class UserController {
     }
 
 
-    //기존 비밀번호는 google가입자는 없음 --> 모든 user들은 닉네임만 수정가능
-    @PutMapping("/update-nickname")
-    public ResponseEntity<?> updateNickname(
+    // ✅사용자 프로필에서 닉네임 수정하기
+    @PutMapping("/update")
+    public ResponseEntity<UserResponseDto> updateUserProfile(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody Map<String, String> requestBody) {
+            @Valid @RequestBody UserUpdateRequestDto updateRequest) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 필요합니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
 
-        String token = authHeader.substring(7); // "Bearer " 제거
+        String token = authHeader.substring(7);
         Claims claims = jwtUtil.parseToken(token);
-        String email = claims.getSubject(); // JWT에서 email 추출
+        String email = claims.getSubject();
 
-        String newNickname = requestBody.get("nickname");
-        if (newNickname == null || newNickname.isEmpty()) {
-            return ResponseEntity.badRequest().body("닉네임을 입력해주세요.");
-        }
-
-        UserResponseDto updatedUser = userService.updateNickname(email, newNickname);
+        UserResponseDto updatedUser = userService.updateUserProfile(email, updateRequest);
         return ResponseEntity.ok(updatedUser);
     }
 
-    // ✅ 회원 탈퇴 API
-    @DeleteMapping("/delete")
-    public ResponseEntity<String> deleteUser(@RequestHeader("Authorization") String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 필요합니다.");
-        }
-
-        String token = authHeader.substring(7); // "Bearer " 제거
-        Claims claims = jwtUtil.parseToken(token);
-        String email = claims.getSubject(); // JWT에서 이메일 추출
-
-        userService.deleteUserByEmail(email);
-        return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
-    }
 
 
 
