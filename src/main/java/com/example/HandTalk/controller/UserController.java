@@ -63,6 +63,20 @@ public class UserController {
         UserResponseDto updatedUser = userService.updateUserProfile(email, updateRequest);
         return ResponseEntity.ok(updatedUser);
     }
+    // ✅ 회원 탈퇴 API
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteUser(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("JWT 토큰이 필요합니다.");
+        }
+
+        String token = authHeader.substring(7); // "Bearer " 제거
+        Claims claims = jwtUtil.parseToken(token);
+        String email = claims.getSubject(); // JWT에서 이메일 추출
+
+        userService.deleteUserByEmail(email);
+        return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
+    }
 
 
 }

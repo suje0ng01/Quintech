@@ -6,6 +6,7 @@ import com.example.HandTalk.dto.UserUpdateRequestDto;
 import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.domain.Role;
 import com.example.HandTalk.domain.User;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -88,6 +89,21 @@ public class UserService {
     public User getUserEntityByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+    }
+
+    // ✅ 회원 탈퇴 서비스
+    // ✅ 회원 탈퇴 서비스 (관련 데이터 삭제 포함)
+    @Transactional
+    public void deleteUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+        // ✅ 사용자 관련 데이터 삭제
+       // practiceLogRepository.deleteByUser(user);  // 학습 기록 삭제
+        //poseDataRepository.deleteByUser(user);  // 손동작 데이터 삭제 (추후 사용 가능)
+
+        // ✅ 사용자 계정 삭제
+        userRepository.delete(user);
     }
 
 
