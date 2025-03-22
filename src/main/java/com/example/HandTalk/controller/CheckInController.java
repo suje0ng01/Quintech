@@ -16,11 +16,13 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("check-in")
 public class CheckInController {
 
-    private final CheckInService checkInService;
-    private final UserService userService;
-    private final JwtUtil jwtUtil;
 
     // ✅ 출석 체크 API(기능 사용안하기로함) --> 팝업형식으로 변경
+        private final CheckInService checkInService;
+        private final UserService userService;
+        private final JwtUtil jwtUtil;
+
+        // ✅ 출석 체크 API(기능 사용안하기로함) --> 팝업형식으로 변경
 //        @PostMapping
 //        public ResponseEntity<String> checkIn(@RequestHeader("Authorization") String authHeader) {
 //            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -57,3 +59,4 @@ public class CheckInController {
 
 
 }
+
