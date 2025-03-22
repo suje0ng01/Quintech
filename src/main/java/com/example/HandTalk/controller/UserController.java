@@ -44,6 +44,9 @@ public class UserController {
 
         return ResponseEntity.ok(userResponse);
     }
+
+
+    // ✅사용자 프로필에서 닉네임 수정하기
     @PutMapping("/update")
     public ResponseEntity<UserResponseDto> updateUserProfile(
             @RequestHeader("Authorization") String authHeader,

@@ -58,7 +58,7 @@ public class UserService {
         return new UserResponseDto(savedUser);
     }
 
-    //이메일을 통한 회원조회
+    //이메일을 통한 회원조회 사용자 뷰로 보여주기위한 용 dto사용
     public UserResponseDto getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
@@ -81,6 +81,13 @@ public class UserService {
         userRepository.save(user);
 
         return new UserResponseDto(user);
+    }
+
+
+    // 출석체크 엔티티 반환용
+    public User getUserEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
     }
 
 
