@@ -64,6 +64,34 @@ public class UserService {
 
         return new UserResponseDto(user);
     }
+    public UserResponseDto updateNickname(String email, String newNickname) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 닉네임 중복 검사
+        if (userRepository.existsByNickname(newNickname)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다.");
+        }
+
+        user.setNickname(newNickname);
+        User updatedUser = userRepository.save(user);
+
+        return new UserResponseDto(updatedUser);
+    }
+
+    // ✅ 회원 탈퇴 서비스
+    public void deleteUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자가 존재하지 않습니다."));
+
+
+        // ✅ 사용자 관련 데이터 삭제(추후 필드)
+        //practiceLogRepository.deleteByUser(user);  // 학습 기록 삭제
+        //poseDataRepository.deleteByUser(user);  // 손동작 데이터 삭제 (추후 사용 가능)
+
+        userRepository.delete(user);
+    }
+
 
 
 }
