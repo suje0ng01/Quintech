@@ -27,8 +27,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
 
-    //✅사용자 조회 api
-
+    // ✅ 사용자 정보 + 출석일수 조회 API (통합)
     @GetMapping("/check")
     public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -39,14 +38,12 @@ public class UserController {
         Claims claims = jwtUtil.parseToken(token);
         String email = claims.getSubject(); // JWT에서 email 추출
 
-        // DB에서 유저 정보 가져오기
+        // 사용자 정보 + streak 통합 조회
         UserResponseDto userResponse = userService.getUserByEmail(email);
-
         return ResponseEntity.ok(userResponse);
     }
 
-
-    // ✅사용자 프로필에서 닉네임 수정하기
+    // ✅ 사용자 닉네임 수정
     @PutMapping("/update")
     public ResponseEntity<UserResponseDto> updateUserProfile(
             @RequestHeader("Authorization") String authHeader,
@@ -63,7 +60,8 @@ public class UserController {
         UserResponseDto updatedUser = userService.updateUserProfile(email, updateRequest);
         return ResponseEntity.ok(updatedUser);
     }
-    // ✅ 회원 탈퇴 API
+
+    // ✅ 회원 탈퇴
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteUser(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -77,6 +75,4 @@ public class UserController {
         userService.deleteUserByEmail(email);
         return ResponseEntity.ok("회원 탈퇴가 완료되었습니다.");
     }
-
-
 }

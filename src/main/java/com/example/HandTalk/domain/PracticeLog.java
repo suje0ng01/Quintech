@@ -1,42 +1,41 @@
 package com.example.HandTalk.domain;
 
 import jakarta.persistence.*;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
-@Getter
-@Setter
-@Table(name = "practice_logs")
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
 public class PracticeLog {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name; //한국어문장
-
-    private String description;
-
-    private String imageUrl;
-
-    @OneToMany(mappedBy = "practiceLog",cascade = CascadeType.ALL,orphanRemoval = true)
-    private List<PoseData> poseDataList;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id",nullable = false)
+    @JoinColumn(name = "user_id") // 주인 쪽에서 JoinColumn
     private User user;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ContentType contentType; // CONSONANT, VOWEL, WORD
 
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    @Column(nullable = true)
+    private String chapter; // Only for WORD type
+
+    @Column(nullable = false)
+    private int correctCount;
+
+    @Column(nullable = false)
+    private int totalCount;
+
+    @Column(nullable = false)
+    private double accuracy;
+
+    @Column(nullable = false)
+    private boolean completed;
+
+    private LocalDateTime finishedAt;
 }

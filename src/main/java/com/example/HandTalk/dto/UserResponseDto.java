@@ -16,15 +16,17 @@ public class UserResponseDto {
     private String name;
     private String email;
     private String nickname; // ✅ 닉네임 추가
+    private int streak; // ✅ 출석일수 추가
 
 
 
 
     // ✅ 회원가입 시 사용 (JWT 없음)
-    public UserResponseDto(User user) {
+    public UserResponseDto(User user, int streak) {
         this.id = user.getId();
         this.name = user.getName();
         this.email = user.getEmail();
-        this.nickname = user.getNickname(); // ✅ 닉네임 추가
+        this.nickname = user.getNickname();
+        this.streak = streak;
     }
 }

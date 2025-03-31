@@ -1,11 +1,11 @@
 package com.example.HandTalk.service;
 
+import com.example.HandTalk.domain.Role;
+import com.example.HandTalk.domain.User;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.dto.UserUpdateRequestDto;
 import com.example.HandTalk.repository.UserRepository;
-import com.example.HandTalk.domain.Role;
-import com.example.HandTalk.domain.User;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +17,10 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CheckInService checkInService; // ✅ 출석 계산용
 
     // ✅ 닉네임 자동 생성 로직 (중복 방지)
     private String generateUniqueNickname(String baseNickname) {
@@ -32,22 +34,18 @@ public class UserService {
         return nickname;
     }
 
-
+    // ✅ 회원가입
     public UserResponseDto registerUser(@Valid UserRequestDto userRequestDto) {
-        // ✅ 이메일 중복 검사
         if (userRepository.findByEmail(userRequestDto.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 이메일입니다.");
         }
 
-        // ✅ 닉네임 중복 검사 (자동 생성 없이 에러 반환)
         if (userRepository.existsByNickname(userRequestDto.getNickname())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 닉네임입니다.");
         }
 
-        // ✅ 비밀번호 암호화
         String encodedPassword = passwordEncoder.encode(userRequestDto.getPassword());
 
-        // ✅ 유저 생성
         User user = new User();
         user.setName(userRequestDto.getName());
         user.setEmail(userRequestDto.getEmail());
@@ -56,55 +54,51 @@ public class UserService {
         user.setRole(Role.USER);
 
         User savedUser = userRepository.save(user);
-        return new UserResponseDto(savedUser);
+
+        return new UserResponseDto(savedUser, 0); // ✅ 가입 시 streak은 0
     }
 
-    //이메일을 통한 회원조회 사용자 뷰로 보여주기위한 용 dto사용
+    // ✅ 사용자 정보 조회 (이메일 기반, streak 포함)
     public UserResponseDto getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        return new UserResponseDto(user);
+        int streak = checkInService.calculateStreak(user); // ✅ 출석일 계산
+        return new UserResponseDto(user, streak);
     }
 
-    // ✅ 사용자 정보 수정 (닉네임 변경)
+    // ✅ 사용자 닉네임 수정
     public UserResponseDto updateUserProfile(String email, UserUpdateRequestDto updateRequest) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        // 닉네임 중복 검사
         if (userRepository.existsByNickname(updateRequest.getNickname())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 존재하는 닉네임입니다.");
         }
 
-        // 닉네임 변경
         user.setNickname(updateRequest.getNickname());
         userRepository.save(user);
 
-        return new UserResponseDto(user);
+        int streak = checkInService.calculateStreak(user);
+        return new UserResponseDto(user, streak);
     }
 
-
-    // 출석체크 엔티티 반환용
+    // ✅ 엔티티 조회용
     public User getUserEntityByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
     }
 
-    // ✅ 회원 탈퇴 서비스
-    // ✅ 회원 탈퇴 서비스 (관련 데이터 삭제 포함)
+    // ✅ 회원 탈퇴
     @Transactional
     public void deleteUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자가 존재하지 않습니다."));
 
-        // ✅ 사용자 관련 데이터 삭제
-       // practiceLogRepository.deleteByUser(user);  // 학습 기록 삭제
-        //poseDataRepository.deleteByUser(user);  // 손동작 데이터 삭제 (추후 사용 가능)
+        // 연관 데이터 삭제 (추후 연동 필요 시 주석 해제)
+        // practiceLogRepository.deleteByUser(user);
+        // poseDataRepository.deleteByUser(user);
 
-        // ✅ 사용자 계정 삭제
         userRepository.delete(user);
     }
-
-
 }
