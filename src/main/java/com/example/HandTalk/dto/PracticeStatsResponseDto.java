@@ -5,18 +5,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class PracticeStatsResponseDto {
-
-    // 자음 통계
-    private int consonantTotalAttempts;
-
-    // 모음 통계
-    private int vowelTotalAttempts;
-
-    // 단어 통계
-    private int wordChapterCount;  // 총 완료한 챕터 수
+    private boolean consonantCompleted;
+    private boolean vowelCompleted;
+    private Map<String, WordProgressDto> wordProgress;  // topic -> 진행률 정보
 }

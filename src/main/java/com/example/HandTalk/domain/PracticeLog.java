@@ -34,6 +34,10 @@ public class PracticeLog {
     @Column(nullable = false)
     private double accuracy;
 
+    @Column(nullable = true)
+    private String topic;  // ✅ "인사말과 기본 표현" 등 대주제
+
+
     @Column(nullable = false)
     private boolean completed;
 

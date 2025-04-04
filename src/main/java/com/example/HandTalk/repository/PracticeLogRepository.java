@@ -11,12 +11,12 @@ import java.util.List;
 @Repository
 public interface PracticeLogRepository extends JpaRepository<PracticeLog, Long> {
 
-    // 자음/모음 반복 학습 수 조회
-    List<PracticeLog> findByUserAndContentTypeIn(User user, List<ContentType> contentTypes);
+    // 자음/모음 완료 여부 체크용
+    boolean existsByUserAndContentTypeAndCompletedTrue(User user, ContentType contentType);
 
-    // contentType별 총 학습 횟수 (자음/모음)
-    long countByUserAndContentType(User user, ContentType contentType);
+    // 단어 전체 학습 로그 (진도율 계산 시 사용)
+    List<PracticeLog> findByUserAndContentType(User user, ContentType contentType);
 
-    // 단어 중 completed = true 인 챕터 수
-    long countByUserAndContentTypeAndCompletedTrue(User user, ContentType contentType);
+    // 단어 완료된 로그만 조회 (진도율 계산 시 사용)
+    List<PracticeLog> findByUserAndContentTypeAndCompletedTrue(User user, ContentType contentType);
 }

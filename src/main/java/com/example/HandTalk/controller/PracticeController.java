@@ -3,7 +3,6 @@ package com.example.HandTalk.controller;
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.PracticeLogRequestDto;
 import com.example.HandTalk.dto.PracticeStatsResponseDto;
-import com.example.HandTalk.dto.RepeatStatsResponseDto;
 import com.example.HandTalk.service.PracticeService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -27,7 +26,7 @@ public class PracticeController {
             @RequestHeader("Authorization") String authHeader,
             @RequestBody PracticeLogRequestDto requestDto
     ) {
-        String email = safeExtractEmail(authHeader);
+        String email = extractEmail(authHeader);
         if (email == null) {
             return ResponseEntity.status(401).body("유효하지 않은 JWT입니다.");
         }
@@ -36,27 +35,10 @@ public class PracticeController {
         return ResponseEntity.ok("학습 결과가 저장되었습니다.");
     }
 
-    // ✅ 전체 학습 반복 횟수 조회
-    @GetMapping("/repeats/detail")
-    public ResponseEntity<?> getRepeatStats(@RequestHeader("Authorization") String authHeader) {
-        String email = safeExtractEmail(authHeader);
-        if (email == null) {
-            return ResponseEntity.status(401).body("유효하지 않은 JWT입니다.");
-        }
-
-        int consonant = practiceService.getConsonantRepeatCount(email);
-        int vowel = practiceService.getVowelRepeatCount(email);
-
-        return ResponseEntity.ok(new RepeatStatsResponseDto(consonant, vowel));
-    }
-
-
     // ✅ 진도율(자음/모음/단어) 조회
     @GetMapping("/progress")
-    public ResponseEntity<?> getProgress(
-            @RequestHeader("Authorization") String authHeader
-    ) {
-        String email = safeExtractEmail(authHeader);
+    public ResponseEntity<?> getProgress(@RequestHeader("Authorization") String authHeader) {
+        String email = extractEmail(authHeader);
         if (email == null) {
             return ResponseEntity.status(401).body("유효하지 않은 JWT입니다.");
         }
@@ -66,7 +48,7 @@ public class PracticeController {
     }
 
     // ✅ JWT에서 이메일 안전하게 추출
-    private String safeExtractEmail(String authHeader) {
+    private String extractEmail(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return null;
         }
