@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:quintech/setting/setting.dart';
+import 'learning/learningpage.dart';
+import 'learning/wordlearning.dart';
 import 'member/login.dart';
 import 'member/profilepage.dart';
 
@@ -151,7 +153,22 @@ class CustomButton extends StatelessWidget {
         border: Border.all(color: Colors.amber),
       ),
       child: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          if (text == '학습') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => LearningPage()),
+            );
+
+          }
+          if (text == '게임') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => LearningDetailPage()),
+            );
+          }
+
+        },
         style: TextButton.styleFrom(
           foregroundColor: Colors.black,
         ),

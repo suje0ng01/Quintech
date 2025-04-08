@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../constants/constants.dart';
+
 
 class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.amber[200],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '설정',
           style: TextStyle(

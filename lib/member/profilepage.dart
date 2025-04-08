@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 
+import '../constants/constants.dart';
+
 class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.amber[300],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '프로필',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.settings, color: Colors.white),
+          icon: Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
           onPressed: () {
-            // 설정 페이지 이동
+            Navigator.pop(context);
           },
         ),
+
         actions: [
           IconButton(
             icon: Icon(Icons.home, color: Colors.white),

@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:quintech/member/signUp.dart';
+import 'package:quintech/constants/constants.dart'; // 파일 경로에 맞게 조정
 
 import '../main.dart';
 import 'findpassword.dart';
-
-void main() {
-  runApp(MyApp());
-}
 
 class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.amber[300],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '로그인',
           style: TextStyle(
