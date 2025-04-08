@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../constants/constants.dart';
+
 class LearningPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFAF6F1),
+      backgroundColor: AppColors.appbarcolor,
       appBar: AppBar(
         backgroundColor: Color(0xFFF9D778),
         title: Text(
