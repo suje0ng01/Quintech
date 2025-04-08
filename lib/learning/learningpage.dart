@@ -112,7 +112,7 @@ class LearningPage extends StatelessWidget {
 
   Widget _buildCheckItem(String text) {
     bool isChecked = text != '자기소개'; // 예시로 일부만 체크
-    bool isEnabled = text != '자기ㅏ소개';
+    bool isEnabled = text != '자기소개';
 
     return CheckboxListTile(
       value: isChecked,
