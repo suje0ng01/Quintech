@@ -6,9 +6,9 @@ class LearningPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.appbarcolor,
+      backgroundColor: Color(0xFFFAF6F1),
       appBar: AppBar(
-        backgroundColor: Color(0xFFF9D778),
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '학습',
           style: TextStyle(
