@@ -8,6 +8,7 @@ import com.example.HandTalk.dto.PracticeStatsResponseDto;
 import com.example.HandTalk.dto.WordProgressDto;
 import com.example.HandTalk.repository.PracticeLogRepository;
 import com.example.HandTalk.repository.UserRepository;
+import com.example.HandTalk.util.WordTopicLoader;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,15 +21,7 @@ public class PracticeService {
 
     private final PracticeLogRepository practiceLogRepository;
     private final UserRepository userRepository;
-
-
-    // Service 내 고정 맵
-    private static final Map<String, Integer> TOTAL_CHAPTER_COUNT = Map.of(
-            "인사말과 기본 표현", 4,
-            "가족과 사람", 3,
-            "음식과 식사", 2
-            // 필요 시 추가
-    );
+    private final WordTopicLoader wordTopicLoader;
 
     // ✅ 학습 결과 저장
     @Transactional
@@ -55,25 +48,24 @@ public class PracticeService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-        // 자음/모음 완료 여부
         boolean consonantDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.CONSONANT);
         boolean vowelDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.VOWEL);
 
-        // 단어 진도율 계산
         Map<String, WordProgressDto> wordProgressMap = new HashMap<>();
 
-        // 완료된 WORD 로그
         List<PracticeLog> completedWordLogs = practiceLogRepository.findByUserAndContentTypeAndCompletedTrue(user, ContentType.WORD);
         Map<String, Set<String>> completedChaptersPerTopic = new HashMap<>();
+
         for (PracticeLog log : completedWordLogs) {
-            if (log.getTopic() == null || log.getChapter() == null) continue;
-            completedChaptersPerTopic
-                    .computeIfAbsent(log.getTopic(), k -> new HashSet<>())
-                    .add(log.getChapter());
+            if (log.getTopic() != null && log.getChapter() != null) {
+                completedChaptersPerTopic
+                        .computeIfAbsent(log.getTopic(), k -> new HashSet<>())
+                        .add(log.getChapter());
+            }
         }
 
-        // TOTAL_CHAPTER_COUNT 기준으로 진도율 계산
-        for (Map.Entry<String, Integer> entry : TOTAL_CHAPTER_COUNT.entrySet()) {
+        // JSON 기반 총 챕터 수 사용
+        for (Map.Entry<String, Integer> entry : wordTopicLoader.getTopicToChapterCount().entrySet()) {
             String topic = entry.getKey();
             int total = entry.getValue();
             int completed = completedChaptersPerTopic.getOrDefault(topic, Collections.emptySet()).size();
