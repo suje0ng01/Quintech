@@ -13,8 +13,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class PracticeStatsResponseDto {
     private Map<String, Boolean> consonantVowelProgress; // "consonant", "vowel"
-    private int overallConsonantVowelProgress;
+    //private int overallConsonantVowelProgress;
 
     private Map<String, Boolean> wordProgress;           // topic -> 완료 여부
-    private int overallWordProgress;
+    //private int overallWordProgress;
 }

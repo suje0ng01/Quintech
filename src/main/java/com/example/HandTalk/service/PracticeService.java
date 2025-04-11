@@ -42,40 +42,34 @@ public class PracticeService {
         practiceLogRepository.save(log);
     }
 
-    // ✅ 진도율 조회 (자음, 모음, 단어 통계 포함)
+    // ✅ 자음/모음 + 단어 통합 진도율 조회
     public PracticeStatsResponseDto getProgressStats(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-        // 1. 자음/모음 완료 여부 Map 구성
+        // 1. 자음/모음 완료 여부
+        Map<String, Boolean> consonantVowelProgress = new HashMap<>();
         boolean consonantDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.CONSONANT);
         boolean vowelDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.VOWEL);
+        consonantVowelProgress.put("consonant", consonantDone);
+        consonantVowelProgress.put("vowel", vowelDone);
 
-        Map<String, Boolean> cvProgress = new HashMap<>();
-        cvProgress.put("consonant", consonantDone);
-        cvProgress.put("vowel", vowelDone);
+        // 2. 단어 완료 여부
+        List<PracticeLog> completedWordLogs = practiceLogRepository
+                .findByUserAndContentTypeAndCompletedTrue(user, ContentType.WORD);
 
-        int cvCompletedCount = (consonantDone ? 1 : 0) + (vowelDone ? 1 : 0);
-        int overallCVProgress = (int) Math.round(cvCompletedCount * 100.0 / 2);
-
-        // 2. 단어 완료 처리
-        List<PracticeLog> completedWordLogs = practiceLogRepository.findByUserAndContentTypeAndCompletedTrue(user, ContentType.WORD);
         Set<String> completedTopics = completedWordLogs.stream()
                 .map(PracticeLog::getTopic)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Map<String, Integer> allTopicMap = wordTopicLoader.getTopicToChapterCount();
-        Map<String, Boolean> wordProgressMap = new HashMap<>();
-        for (String topic : allTopicMap.keySet()) {
-            wordProgressMap.put(topic, completedTopics.contains(topic));
+        Set<String> allTopics = wordTopicLoader.getTopicToChapterCount().keySet();
+
+        Map<String, Boolean> wordProgress = new HashMap<>();
+        for (String topic : allTopics) {
+            wordProgress.put(topic, completedTopics.contains(topic));
         }
 
-        int wordCompleted = (int) wordProgressMap.values().stream().filter(b -> b).count();
-        int overallWordProgress = wordProgressMap.isEmpty() ? 0 :
-                (int) Math.round(wordCompleted * 100.0 / wordProgressMap.size());
-
-        return new PracticeStatsResponseDto(cvProgress, overallCVProgress, wordProgressMap, overallWordProgress);
+        return new PracticeStatsResponseDto(consonantVowelProgress, wordProgress);
     }
-
 }
