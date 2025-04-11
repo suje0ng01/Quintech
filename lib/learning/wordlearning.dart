@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/constants.dart';
 
 class LearningDetailPage extends StatelessWidget {
   const LearningDetailPage({super.key});
@@ -7,27 +8,26 @@ class LearningDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: AppBar(
+          backgroundColor: AppColors.appbarcolor,
+          title: const Text(
+            '자음',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          centerTitle: true,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),        ),
+      ),
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            // 상단 AppBar
-            Container(
-              color: Colors.amber[200],
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Icon(Icons.settings),
-                  Text(
-                    '자음',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  Icon(Icons.account_circle),
-                ],
-              ),
-            ),
-
-            // 진행도 표시
+            // ✅ 진행도 표시
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
               child: Column(
@@ -43,7 +43,7 @@ class LearningDetailPage extends StatelessWidget {
               ),
             ),
 
-            // 수어 학습 카드
+            // ✅ 수어 학습 카드
             Card(
               margin: const EdgeInsets.all(16),
               elevation: 4,
@@ -58,7 +58,10 @@ class LearningDetailPage extends StatelessWidget {
                     const SizedBox(height: 8),
                     const Text(
                       'ㄴ',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Container(
@@ -74,7 +77,7 @@ class LearningDetailPage extends StatelessWidget {
               ),
             ),
 
-            // 실시간 손 인식 박스
+            // ✅ 실시간 손 인식 박스
             Container(
               width: 200,
               height: 200,
@@ -99,7 +102,7 @@ class LearningDetailPage extends StatelessWidget {
               ),
             ),
 
-            // 페이지 이동 버튼
+            // ✅ 페이지 이동 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Row(

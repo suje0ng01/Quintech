@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:quintech/setting/setting.dart';
+import 'constants/constants.dart';
 import 'learning/learningpage.dart';
 import 'learning/wordlearning.dart';
 import 'member/login.dart';
@@ -62,7 +63,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.amber[300],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '수어메이트',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24),
