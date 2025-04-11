@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../constants/constants.dart';
+
 class FindPasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.amber[200],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '비밀번호 찾기',
           style: TextStyle(

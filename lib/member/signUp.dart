@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../constants/constants.dart';
+
 class SignUpPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.amber[300],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           '회원가입',
           style: TextStyle(

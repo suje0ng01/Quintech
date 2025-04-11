@@ -114,7 +114,7 @@ class HomeScreen extends StatelessWidget {
               // 현재는 무조건 프로필 페이지로 이동
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
+                MaterialPageRoute(builder: (context) => LoginPage()),
               );
             },
           ),
