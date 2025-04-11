@@ -29,47 +29,62 @@ public class PracticeService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
+        int correct = dto.getCorrectCount();
+        int total = dto.getTotalCount();
+        double accuracy = (total == 0) ? 0.0 : (correct * 100.0) / total;
+        boolean completed = accuracy >= 80.0;
+
         PracticeLog log = new PracticeLog();
         log.setUser(user);
         log.setContentType(dto.getContentType());
-        log.setCorrectCount(dto.getCorrectCount());
-        log.setTotalCount(dto.getTotalCount());
-        log.setAccuracy(dto.getAccuracy());
-        log.setCompleted(dto.isCompleted());
+        log.setCorrectCount(correct);
+        log.setTotalCount(total);
+        log.setAccuracy(accuracy);
+        log.setCompleted(completed);
         log.setFinishedAt(dto.getFinishedAt());
         log.setTopic(dto.getTopic());
 
         practiceLogRepository.save(log);
     }
 
-    // ✅ 자음/모음 + 단어 통합 진도율 조회
+    // ✅ 진도율 조회 (자음, 모음, 단어 통계 포함)
     public PracticeStatsResponseDto getProgressStats(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-        // 1. 자음/모음 완료 여부
-        Map<String, Boolean> consonantVowelProgress = new HashMap<>();
+        // 1. 자음/모음 진행 상황
+        Map<String, Boolean> consonantVowelProgress = getConsonantVowelProgress(user);
+
+        // 2. 단어 진행 상황
+        Map<String, Boolean> wordProgress = getWordProgress(user);
+
+        // 3. 응답 생성 (진도율 퍼센트는 프론트에 표시 안 하기로 했으므로 미포함)
+        return new PracticeStatsResponseDto(consonantVowelProgress, wordProgress);
+    }
+
+    // 자음/모음 완료 여부
+    private Map<String, Boolean> getConsonantVowelProgress(User user) {
         boolean consonantDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.CONSONANT);
         boolean vowelDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.VOWEL);
-        consonantVowelProgress.put("consonant", consonantDone);
-        consonantVowelProgress.put("vowel", vowelDone);
 
-        // 2. 단어 완료 여부
-        List<PracticeLog> completedWordLogs = practiceLogRepository
-                .findByUserAndContentTypeAndCompletedTrue(user, ContentType.WORD);
+        Map<String, Boolean> map = new HashMap<>();
+        map.put("consonant", consonantDone);
+        map.put("vowel", vowelDone);
+        return map;
+    }
 
-        Set<String> completedTopics = completedWordLogs.stream()
+    // 단어 주제별 완료 여부
+    private Map<String, Boolean> getWordProgress(User user) {
+        List<PracticeLog> completedLogs = practiceLogRepository.findByUserAndContentTypeAndCompletedTrue(user, ContentType.WORD);
+        Set<String> completedTopics = completedLogs.stream()
                 .map(PracticeLog::getTopic)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Set<String> allTopics = wordTopicLoader.getTopicToChapterCount().keySet();
-
-        Map<String, Boolean> wordProgress = new HashMap<>();
-        for (String topic : allTopics) {
-            wordProgress.put(topic, completedTopics.contains(topic));
-        }
-
-        return new PracticeStatsResponseDto(consonantVowelProgress, wordProgress);
+        return wordTopicLoader.getTopicToChapterCount().keySet().stream()
+                .collect(Collectors.toMap(
+                        topic -> topic,
+                        completedTopics::contains
+                ));
     }
 }
