@@ -12,7 +12,9 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PracticeStatsResponseDto {
-    private boolean consonantCompleted;
-    private boolean vowelCompleted;
-    private Map<String, WordProgressDto> wordProgress;  // topic -> 진행률 정보
+    private Map<String, Boolean> consonantVowelProgress; // "consonant", "vowel"
+    private int overallConsonantVowelProgress;
+
+    private Map<String, Boolean> wordProgress;           // topic -> 완료 여부
+    private int overallWordProgress;
 }

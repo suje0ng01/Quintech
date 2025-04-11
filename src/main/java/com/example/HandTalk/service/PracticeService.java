@@ -5,7 +5,6 @@ import com.example.HandTalk.domain.PracticeLog;
 import com.example.HandTalk.domain.User;
 import com.example.HandTalk.dto.PracticeLogRequestDto;
 import com.example.HandTalk.dto.PracticeStatsResponseDto;
-import com.example.HandTalk.dto.WordProgressDto;
 import com.example.HandTalk.repository.PracticeLogRepository;
 import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.util.WordTopicLoader;
@@ -14,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +32,6 @@ public class PracticeService {
         PracticeLog log = new PracticeLog();
         log.setUser(user);
         log.setContentType(dto.getContentType());
-        log.setChapter(dto.getChapter());
         log.setCorrectCount(dto.getCorrectCount());
         log.setTotalCount(dto.getTotalCount());
         log.setAccuracy(dto.getAccuracy());
@@ -43,37 +42,40 @@ public class PracticeService {
         practiceLogRepository.save(log);
     }
 
-    // ✅ 진도율 조회
+    // ✅ 진도율 조회 (자음, 모음, 단어 통계 포함)
     public PracticeStatsResponseDto getProgressStats(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
+        // 1. 자음/모음 완료 여부 Map 구성
         boolean consonantDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.CONSONANT);
         boolean vowelDone = practiceLogRepository.existsByUserAndContentTypeAndCompletedTrue(user, ContentType.VOWEL);
 
-        Map<String, WordProgressDto> wordProgressMap = new HashMap<>();
+        Map<String, Boolean> cvProgress = new HashMap<>();
+        cvProgress.put("consonant", consonantDone);
+        cvProgress.put("vowel", vowelDone);
 
+        int cvCompletedCount = (consonantDone ? 1 : 0) + (vowelDone ? 1 : 0);
+        int overallCVProgress = (int) Math.round(cvCompletedCount * 100.0 / 2);
+
+        // 2. 단어 완료 처리
         List<PracticeLog> completedWordLogs = practiceLogRepository.findByUserAndContentTypeAndCompletedTrue(user, ContentType.WORD);
-        Map<String, Set<String>> completedChaptersPerTopic = new HashMap<>();
+        Set<String> completedTopics = completedWordLogs.stream()
+                .map(PracticeLog::getTopic)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
-        for (PracticeLog log : completedWordLogs) {
-            if (log.getTopic() != null && log.getChapter() != null) {
-                completedChaptersPerTopic
-                        .computeIfAbsent(log.getTopic(), k -> new HashSet<>())
-                        .add(log.getChapter());
-            }
+        Map<String, Integer> allTopicMap = wordTopicLoader.getTopicToChapterCount();
+        Map<String, Boolean> wordProgressMap = new HashMap<>();
+        for (String topic : allTopicMap.keySet()) {
+            wordProgressMap.put(topic, completedTopics.contains(topic));
         }
 
-        // JSON 기반 총 챕터 수 사용
-        for (Map.Entry<String, Integer> entry : wordTopicLoader.getTopicToChapterCount().entrySet()) {
-            String topic = entry.getKey();
-            int total = entry.getValue();
-            int completed = completedChaptersPerTopic.getOrDefault(topic, Collections.emptySet()).size();
-            int progress = total == 0 ? 0 : (int) Math.round((completed * 100.0) / total);
+        int wordCompleted = (int) wordProgressMap.values().stream().filter(b -> b).count();
+        int overallWordProgress = wordProgressMap.isEmpty() ? 0 :
+                (int) Math.round(wordCompleted * 100.0 / wordProgressMap.size());
 
-            wordProgressMap.put(topic, new WordProgressDto(completed, total, progress));
-        }
-
-        return new PracticeStatsResponseDto(consonantDone, vowelDone, wordProgressMap);
+        return new PracticeStatsResponseDto(cvProgress, overallCVProgress, wordProgressMap, overallWordProgress);
     }
+
 }

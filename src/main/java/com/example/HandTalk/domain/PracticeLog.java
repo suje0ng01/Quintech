@@ -22,8 +22,8 @@ public class PracticeLog {
     @Column(nullable = false)
     private ContentType contentType; // CONSONANT, VOWEL, WORD
 
-    @Column(nullable = true)
-    private String chapter; // Only for WORD type
+//    @Column(nullable = true)
+//    private String word; // Only for WORD type
 
     @Column(nullable = false)
     private int correctCount;
