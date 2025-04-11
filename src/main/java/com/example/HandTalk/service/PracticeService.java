@@ -52,14 +52,26 @@ public class PracticeService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
 
-        // 1. 자음/모음 진행 상황
         Map<String, Boolean> consonantVowelProgress = getConsonantVowelProgress(user);
-
-        // 2. 단어 진행 상황
         Map<String, Boolean> wordProgress = getWordProgress(user);
 
-        // 3. 응답 생성 (진도율 퍼센트는 프론트에 표시 안 하기로 했으므로 미포함)
-        return new PracticeStatsResponseDto(consonantVowelProgress, wordProgress);
+        // ✅ 가장 최근 학습 기록 가져오기
+        Optional<PracticeLog> latestLogOpt = practiceLogRepository.findTopByUserOrderByFinishedAtDesc(user);
+
+        ContentType latestType = null;
+        String latestTopic = null;
+        if (latestLogOpt.isPresent()) {
+            PracticeLog log = latestLogOpt.get();
+            latestType = log.getContentType();
+            latestTopic = log.getTopic(); // WORD가 아닐 경우 null일 수 있음
+        }
+
+        return new PracticeStatsResponseDto(
+                consonantVowelProgress,
+                wordProgress,
+                latestType,
+                latestTopic
+        );
     }
 
     // 자음/모음 완료 여부
