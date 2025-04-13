@@ -8,8 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -17,6 +16,9 @@ public class WordTopicLoader {
 
     @Getter
     private final Map<String, Integer> topicToChapterCount = new HashMap<>();
+
+    @Getter
+    private final Map<String, List<String>> topicToWords = new HashMap<>();
 
     @PostConstruct
     public void init() {
@@ -36,10 +38,19 @@ public class WordTopicLoader {
 
                     if (topicNode != null && wordsNode != null && wordsNode.isArray()) {
                         String topic = topicNode.asText();
-                        int wordCount = wordsNode.size(); // 단어 수 == 챕터 수
+                        int wordCount = wordsNode.size();
+
+                        // ✅ 단어 리스트 추출
+                        List<String> words = new ArrayList<>();
+                        for (JsonNode wordNode : wordsNode) {
+                            words.add(wordNode.asText());
+                        }
+
                         topicToChapterCount.put(topic, wordCount);
+                        topicToWords.put(topic, words);
                     }
                 }
+
                 log.info("단어 카테고리 {}개 로딩 완료: {}", topicToChapterCount.size(), topicToChapterCount.keySet());
             } else {
                 log.warn("categories 항목이 없거나 배열이 아닙니다.");
@@ -48,5 +59,10 @@ public class WordTopicLoader {
         } catch (Exception e) {
             log.error("단어 JSON 로딩 실패", e);
         }
+    }
+
+    // ✅ 단일 topic의 단어 리스트 반환
+    public List<String> getWordsByTopic(String topic) {
+        return topicToWords.getOrDefault(topic, Collections.emptyList());
     }
 }

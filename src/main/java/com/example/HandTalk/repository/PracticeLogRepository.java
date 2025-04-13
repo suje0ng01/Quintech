@@ -21,6 +21,9 @@ public interface PracticeLogRepository extends JpaRepository<PracticeLog, Long> 
     // 단어 완료된 로그만 조회 (진도율 계산 시 사용)
     List<PracticeLog> findByUserAndContentTypeAndCompletedTrue(User user, ContentType contentType);
 
+    // ✅ 전체 완료된 학습 로그 (게임 출제용)
+    List<PracticeLog> findByUserAndCompletedTrue(User user);
+
     // ✅ 가장 마지막에 저장된 학습 로그 (현재 학습 단원 판단용)
     Optional<PracticeLog> findTopByUserOrderByFinishedAtDesc(User user);
 }

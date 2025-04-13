@@ -36,7 +36,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configure(http)) // ✅ CORS 허용 설정
                 .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS)) // ✅ 세션 사용 X (JWT 사용)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login","/api/practice/repeats/detail","/api/practice/progress","/api/practice/save", "/register","api/**", "/api/user/register", "/success", "/auth/login", "/oauth2/**","/auth/oauth/google/**","/api/user/**","/api/user/check","/auth/**","/check-in/**","/api/password/**").permitAll() // ✅ 로그인, 회원가입은 모두 허용
+                        .requestMatchers("/","/api/game/save","/api/game/questions","/api/game/stats", "/login","/api/practice/repeats/detail","/api/practice/progress","/api/practice/save", "/register","api/**", "/api/user/register", "/success", "/auth/login", "/oauth2/**","/auth/oauth/google/**","/api/user/**","/api/user/check","/auth/**","/check-in/**","/api/password/**").permitAll() // ✅ 로그인, 회원가입은 모두 허용
                         .anyRequest().authenticated() // ✅ 나머지는 인증 필요
                 )
                 .exceptionHandling(exception -> exception
