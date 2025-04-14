@@ -71,10 +71,20 @@ class SignUpPage extends StatelessWidget {
         Text(label, style: TextStyle(fontSize: 16)),
         SizedBox(height: 5),
         TextField(
-          obscureText: obscureText,
           decoration: InputDecoration(
             hintText: '입력',
-            border: OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5), // 모서리 둥글게
+              borderSide: BorderSide(color: Colors.grey, width: 1), // 테두리 연한 회색
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: BorderSide(color: Colors.grey.shade300, width: 1), // 기본 테두리 연한 회색
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: BorderSide(color: Colors.black, width: 2), // 클릭 시 검은색 테두리
+            ),
           ),
         ),
       ],
@@ -93,7 +103,19 @@ class SignUpPage extends StatelessWidget {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: '입력',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: BorderSide(color: Colors.grey, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: BorderSide(
+                        color: Colors.grey.shade300, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: BorderSide(color: Colors.black, width: 2),
+                  ),
                 ),
               ),
             ),
@@ -103,6 +125,9 @@ class SignUpPage extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey.shade700,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(5),
+                ),
               ),
               child: Text('중복 확인'),
             ),
