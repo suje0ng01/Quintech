@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:quintech/setting/setting.dart';
@@ -7,9 +8,14 @@ import 'learning/wordlearning.dart';
 import 'member/login.dart';
 import 'member/profilepage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(MyApp());
+  print('Firebase Initialized');
 }
+
+
 
 class MyApp extends StatelessWidget {
   @override
@@ -19,12 +25,14 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         scaffoldBackgroundColor: Colors.white,
       ),
-      home: SplashScreen(),
+      // ✅ SplashScreen 대신 HomeScreen 바로 실행
+      home: HomeScreen(),
     );
   }
 }
 
-// ✅ 스플래시 화면
+/*
+// ✅ 스플래시 화면 (현재는 주석 처리됨 - 필요시 다시 사용 가능)
 class SplashScreen extends StatefulWidget {
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -55,6 +63,7 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
+*/
 
 // ✅ 홈 화면
 class HomeScreen extends StatelessWidget {
@@ -66,7 +75,11 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: AppColors.appbarcolor,
         title: Text(
           '수어메이트',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 24,
+          ),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -75,12 +88,15 @@ class HomeScreen extends StatelessWidget {
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => SettingsPage(),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                pageBuilder: (context, animation, secondaryAnimation) =>
+                    SettingsPage(),
+                transitionsBuilder:
+                    (context, animation, secondaryAnimation, child) {
                   const begin = Offset(-1.0, 0.0);
                   const end = Offset.zero;
                   const curve = Curves.easeInOut;
-                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var tween =
+                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
                   return SlideTransition(
                     position: animation.drive(tween),
                     child: child,
@@ -111,7 +127,7 @@ class HomeScreen extends StatelessWidget {
                 );
               }
               */
-              // 현재는 무조건 프로필 페이지로 이동
+              // 현재는 무조건 로그인 페이지로 이동
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => LoginPage()),
@@ -136,6 +152,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+// ✅ 커스텀 버튼 위젯
 class CustomButton extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -160,7 +177,6 @@ class CustomButton extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => LearningPage()),
             );
-
           }
           if (text == '게임') {
             Navigator.push(
@@ -168,7 +184,7 @@ class CustomButton extends StatelessWidget {
               MaterialPageRoute(builder: (context) => LearningDetailPage()),
             );
           }
-
+          // '단어장', '한국수어사전' 등 다른 메뉴는 추후 연동
         },
         style: TextButton.styleFrom(
           foregroundColor: Colors.black,
