@@ -42,3 +42,11 @@ android {
 flutter {
     source = "../.."
 }
+
+
+apply plugin: 'com.google.gms.google-services' // ✅ 파일 맨 아래
+
+dependencies {
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-auth' // 로그인 용
+}
