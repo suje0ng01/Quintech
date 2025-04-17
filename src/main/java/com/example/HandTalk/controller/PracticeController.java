@@ -2,7 +2,9 @@ package com.example.HandTalk.controller;
 
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.PracticeLogRequestDto;
+import com.example.HandTalk.dto.PracticeQuestionDto;
 import com.example.HandTalk.dto.PracticeStatsResponseDto;
+import com.example.HandTalk.service.PracticeQuestionService;
 import com.example.HandTalk.service.PracticeService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -12,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/practice")
 @RequiredArgsConstructor
@@ -19,6 +23,7 @@ public class PracticeController {
 
     private final PracticeService practiceService;
     private final JwtUtil jwtUtil;
+    private final PracticeQuestionService practiceQuestionService;
 
     // ✅ 학습 결과 저장
     @PostMapping("/save")
@@ -62,4 +67,16 @@ public class PracticeController {
             return null;
         }
     }
+    @GetMapping("/questions/consonant")
+    public ResponseEntity<?> getConsonantQuestions() {
+        List<PracticeQuestionDto> questions = practiceQuestionService.getConsonantQuestions();
+        return ResponseEntity.ok(questions);
+    }
+    @GetMapping("/questions/vowel")
+    public ResponseEntity<?> getVowelQugitestions() {
+        List<PracticeQuestionDto> questions = practiceQuestionService.getVowelQuestions();
+        return ResponseEntity.ok(questions);
+    }
+
+
 }
