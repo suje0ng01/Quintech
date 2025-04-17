@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:quintech/learning/wordlearning.dart';
 import '../constants/constants.dart';
 
 class LearningPage extends StatelessWidget {
+  const LearningPage({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,18 +34,18 @@ class LearningPage extends StatelessWidget {
           children: [
             _buildInfoBox(),
             const SizedBox(height: 20),
-            _buildChapterCard('모음', 0.0),
-            _buildChapterCard('자음', 0.3),
-            _buildChapterCard('식생활', 1.0),
-            _buildChapterCard('주생활', 0.0),
-            _buildChapterCard('동식물', 0.0),
-            _buildChapterCard('인간', 0.0),
-            _buildChapterCard('사회생활', 0.0),
-            _buildChapterCard('삶', 0.0),
-            _buildChapterCard('문화', 0.0),
-            _buildChapterCard('개념', 0.0),
-            _buildChapterCard('기타', 0.0),
-            _buildChapterCard('경제생활', 0.0),
+            _buildChapterCard(context, '모음', 0.0),
+            _buildChapterCard(context, '자음', 0.3),
+            _buildChapterCard(context, '식생활', 1.0),
+            _buildChapterCard(context, '주생활', 0.0),
+            _buildChapterCard(context, '동식물', 0.0),
+            _buildChapterCard(context, '인간', 0.0),
+            _buildChapterCard(context, '사회생활', 0.0),
+            _buildChapterCard(context, '삶', 0.0),
+            _buildChapterCard(context, '문화', 0.0),
+            _buildChapterCard(context, '개념', 0.0),
+            _buildChapterCard(context, '기타', 0.0),
+            _buildChapterCard(context, '경제생활', 0.0),
           ],
         ),
       ),
@@ -69,7 +72,7 @@ class LearningPage extends StatelessWidget {
     );
   }
 
-  Widget _buildChapterCard(String title, double progress) {
+  Widget _buildChapterCard(BuildContext context, String title, double progress) {
     String status;
     Color statusColor;
 
@@ -84,43 +87,53 @@ class LearningPage extends StatelessWidget {
       statusColor = Colors.green;
     }
 
-    return Container(
-      height: 60,
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LearningDetailPage(category: title), // ✅ 카테고리 넘기기
           ),
-          Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: statusColor,
+        );
+      },
+      child: Container(
+        height: 60,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 16,
               ),
             ),
-          ),
-        ],
+            Container(
+              height: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

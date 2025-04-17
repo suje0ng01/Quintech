@@ -179,10 +179,10 @@ class CustomButton extends StatelessWidget {
             );
           }
           if (text == '게임') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => LearningDetailPage()),
-            );
+            // Navigator.push(
+            //   context,
+            //   MaterialPageRoute(builder: (context) => LearningDetailPage()),
+            // );
           }
           // '단어장', '한국수어사전' 등 다른 메뉴는 추후 연동
         },
