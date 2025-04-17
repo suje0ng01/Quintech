@@ -13,5 +13,5 @@ public class GameQuestionDto {
     private ContentType contentType;   // CONSONANT, VOWEL, WORD
     private String topic;              // 단어일 경우 주제명
     private String question;           // 문제 식별자 (ex. "ㄱ", "기본 인사")
-    private String videoUrl;           // Firebase 경로
+    private String imageUrl;           // Firebase 경로
 }

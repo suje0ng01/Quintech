@@ -2,8 +2,11 @@ package com.example.HandTalk.controller;
 
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.PracticeLogRequestDto;
+import com.example.HandTalk.dto.PracticeQuestionDto;
 import com.example.HandTalk.dto.PracticeStatsResponseDto;
+import com.example.HandTalk.service.PracticeQuestionService;
 import com.example.HandTalk.service.PracticeService;
+import com.example.HandTalk.util.WordTopicLoader;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -12,12 +15,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/practice")
 @RequiredArgsConstructor
 public class PracticeController {
 
     private final PracticeService practiceService;
+    private final PracticeQuestionService practiceQuestionService;
+    private final WordTopicLoader wordTopicLoader;
     private final JwtUtil jwtUtil;
 
     // ✅ 학습 결과 저장
@@ -46,6 +53,39 @@ public class PracticeController {
         PracticeStatsResponseDto response = practiceService.getProgressStats(email);
         return ResponseEntity.ok(response);
     }
+
+    // ✅ 자음 문제 출제
+    @GetMapping("/questions/consonant")
+    public ResponseEntity<?> getConsonantQuestions() {
+        return ResponseEntity.ok(practiceQuestionService.getConsonantQuestions());
+    }
+
+    // ✅ 모음 문제 출제
+    @GetMapping("/questions/vowel")
+    public ResponseEntity<?> getVowelQuestions() {
+        return ResponseEntity.ok(practiceQuestionService.getVowelQuestions());
+    }
+
+
+
+    // ✅ 토픽별 단어 문제 출제
+    @GetMapping("/questions/word")
+    public ResponseEntity<?> getWordQuestions(@RequestParam("topic") String topic) {
+        topic = topic.trim();
+        wordTopicLoader.ensureInitialized();
+
+        if (!wordTopicLoader.getTopicToWords().containsKey(topic)) {
+            return ResponseEntity.badRequest().body("❌ 존재하지 않는 topic입니다: " + topic);
+        }
+
+        List<PracticeQuestionDto> questions = practiceQuestionService.getWordQuestions(topic);
+        if (questions.isEmpty()) {
+            return ResponseEntity.status(404).body("⚠️ 해당 토픽에 등록된 단어 비디오가 없습니다.");
+        }
+
+        return ResponseEntity.ok(questions);
+    }
+
 
     // ✅ JWT에서 이메일 안전하게 추출
     private String extractEmail(String authHeader) {
