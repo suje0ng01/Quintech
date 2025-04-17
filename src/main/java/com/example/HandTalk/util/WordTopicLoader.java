@@ -2,67 +2,75 @@ package com.example.HandTalk.util;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.*;
 
 @Slf4j
+@Getter
 @Component
 public class WordTopicLoader {
 
-    @Getter
     private final Map<String, Integer> topicToChapterCount = new HashMap<>();
-
-    @Getter
     private final Map<String, List<String>> topicToWords = new HashMap<>();
+    private boolean initialized = false;
 
-    @PostConstruct
-    public void init() {
+    @EventListener(ContextRefreshedEvent.class)
+    public void loadOnStartup() {
+        log.info("🔁 Application context 초기화 완료 → 단어 데이터 로딩 시도");
+        load();
+    }
+
+    public synchronized void load() {
         try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("data/word_categories.json")) {
             if (inputStream == null) {
-                throw new IllegalArgumentException("JSON 파일을 찾을 수 없습니다: data/word_categories.json");
+                throw new IllegalStateException("❌ JSON 파일 없음: data/word_categories.json");
             }
 
             ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(inputStream);
-            JsonNode categories = rootNode.get("categories");
+            JsonNode root = objectMapper.readTree(inputStream);
+            JsonNode categories = root.get("categories");
 
-            if (categories != null && categories.isArray()) {
-                for (JsonNode category : categories) {
-                    JsonNode topicNode = category.get("topic");
-                    JsonNode wordsNode = category.get("words");
-
-                    if (topicNode != null && wordsNode != null && wordsNode.isArray()) {
-                        String topic = topicNode.asText();
-                        int wordCount = wordsNode.size();
-
-                        // ✅ 단어 리스트 추출
-                        List<String> words = new ArrayList<>();
-                        for (JsonNode wordNode : wordsNode) {
-                            words.add(wordNode.asText());
-                        }
-
-                        topicToChapterCount.put(topic, wordCount);
-                        topicToWords.put(topic, words);
-                    }
-                }
-
-                log.info("단어 카테고리 {}개 로딩 완료: {}", topicToChapterCount.size(), topicToChapterCount.keySet());
-            } else {
-                log.warn("categories 항목이 없거나 배열이 아닙니다.");
+            if (categories == null || !categories.isArray()) {
+                throw new IllegalStateException("❗ categories 항목 누락 또는 비정상");
             }
 
+            topicToWords.clear();
+            topicToChapterCount.clear();
+
+            for (JsonNode category : categories) {
+                String topic = category.get("topic").asText();
+                List<String> words = new ArrayList<>();
+                for (JsonNode word : category.get("words")) {
+                    words.add(word.asText());
+                }
+                topicToWords.put(topic, words);
+                topicToChapterCount.put(topic, words.size());
+            }
+
+            initialized = true;
+            log.info("✅ 총 {}개 topic 로딩 완료: {}", topicToWords.size(), topicToWords.keySet());
+
         } catch (Exception e) {
-            log.error("단어 JSON 로딩 실패", e);
+            initialized = false;
+            log.error("🔥 JSON 로딩 실패", e);
         }
     }
 
-    // ✅ 단일 topic의 단어 리스트 반환
+    public void ensureInitialized() {
+        if (!initialized) {
+            log.warn("⚠️ 데이터 미초기화 상태 → 재시도");
+            load();
+        }
+    }
+
     public List<String> getWordsByTopic(String topic) {
-        return topicToWords.getOrDefault(topic, Collections.emptyList());
+        ensureInitialized();
+        return topicToWords.getOrDefault(topic.trim(), Collections.emptyList());
     }
 }
