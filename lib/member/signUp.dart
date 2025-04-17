@@ -48,7 +48,10 @@ class SignUpPage extends StatelessWidget {
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5))
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          //TODO : 실제 회원가입 로직 처리 후
+                          Navigator.pop(context);  //로그인 페이지로 돌아감
+                        },
                         child: Text('회원가입', style: TextStyle(fontSize: 18)),
                       ),
                     ),

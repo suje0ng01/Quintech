@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/login_state.dart';
 import 'package:quintech/member/signUp.dart';
-import 'package:quintech/constants/constants.dart'; // 파일 경로에 맞게 조정
-
-import '../main.dart';
+import 'package:quintech/constants/constants.dart';
 import 'findpassword.dart';
 
 class LoginPage extends StatelessWidget {
@@ -93,7 +93,10 @@ class LoginPage extends StatelessWidget {
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5))
                         ),
-                        onPressed: () {},
+                        onPressed: () { //로그인 버튼 클릭 시 로그인 상태로 변환 및 이전 페이지로 이동
+                          context.read<LoginState>().logIn();
+                          Navigator.pop(context);
+                        },
                         child: Text('로그인', style: TextStyle(fontSize: 18)),
                       ),
                     ),

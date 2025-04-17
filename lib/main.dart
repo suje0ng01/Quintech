@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
-import 'package:quintech/setting/setting.dart';
+import 'state/login_state.dart';
 import 'learning/learningpage.dart';
 import 'learning/wordlearning.dart';
+import 'settings/setting_page.dart';
+import 'dictionary/dictionary_page.dart';
 import 'member/login.dart';
 import 'member/profilepage.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(
+      ChangeNotifierProvider(
+      create: (_) => LoginState(),
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -92,11 +100,8 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.person),
-            onPressed: () {
-              // TODO: 로그인 상태 체크 후 분기처리 (나중에 연동 예정)
-              /*
-              final prefs = await SharedPreferences.getInstance();
-              final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+            onPressed: () {  
+              final isLoggedIn = Provider.of<LoginState>(context, listen: false).isLoggedIn;
 
               if (isLoggedIn) {
                 Navigator.push(
@@ -109,12 +114,6 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => LoginPage()),
                 );
               }
-              */
-              // 현재는 무조건 프로필 페이지로 이동
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
             },
           ),
         ],
@@ -166,6 +165,11 @@ class CustomButton extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => LearningDetailPage()),
             );
+          }
+          if (text == '단어장') {
+            Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (context) => DictionaryPage()));
           }
 
         },

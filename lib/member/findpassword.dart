@@ -77,7 +77,8 @@ class FindPasswordPage extends StatelessWidget {
                           ),
                         ),
                         onPressed: () {
-                          // 여기에 비밀번호 재설정 링크 전송 로직 추가
+                          // TODO : 비밀번호 재설정 로직 추가
+                          Navigator.pop(context); //로그인 페이지로 돌아감
                         },
                         child: Text(
                           '비밀번호 재설정',
