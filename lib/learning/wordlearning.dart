@@ -27,7 +27,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         .collection('learningdata')     // 최상위 컬렉션
         .doc('category')                // category 문서
         .collection(widget.category)    // 넘겨받은 카테고리
-        .orderBy('name')
+        .orderBy('question')
         .get();
 
     setState(() {
