@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../constants/constants.dart';
 
+import '../data/dummy_member.dart';//TODO : 더미 유저 데이터
+
+
 class ProfilePage extends StatelessWidget {
+  ProfilePage({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    final user = DummyUser.example;  //더미 유저 데이터 사용
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -30,14 +36,14 @@ class ProfilePage extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundImage: AssetImage('assets/profile.jpg'), // 사용자 이미지 경로
+                  backgroundImage: NetworkImage(user.profileImageUrl),
                 ),
                 SizedBox(width: 15),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("name", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    Text("email@email.com", style: TextStyle(color: Colors.grey)),
+                    Text(user.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    Text(user.email, style: TextStyle(color: Colors.grey)),
                   ],
                 )
               ],
@@ -47,7 +53,7 @@ class ProfilePage extends StatelessWidget {
             // 학습 일수
             ProfileCard(
               icon: Icons.access_time,
-              title: "57일",
+              title: '${user.attendanceDays}일',
               subtitle: "학습 일수",
             ),
             SizedBox(height: 15),

@@ -1,79 +1,52 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
-import 'package:quintech/setting/setting.dart';
-import 'constants/constants.dart';
-import 'learning/learningpage.dart';
-import 'learning/wordlearning.dart';
-import 'member/login.dart';
-import 'member/profilepage.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'state/login_state.dart'; // LoginState import
+import 'constants/constants.dart'; // 색상 같은 상수 모음
+import 'learning/learningpage.dart'; // 학습 페이지
+ import 'settings/setting_page.dart'; // 설정 페이지
+import 'dictionary/dictionary_page.dart'; // 단어장
+import 'member/login.dart'; // 로그인 페이지
+import 'member/profilepage.dart'; // 프로필 페이지
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  runApp(MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => LoginState()),
+      ],
+      child: const MyApp(),
+    ),
+  );
   print('Firebase Initialized');
 }
 
-
-
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-      ),
-      // ✅ SplashScreen 대신 HomeScreen 바로 실행
+      theme: ThemeData(scaffoldBackgroundColor: Colors.white),
       home: HomeScreen(),
     );
   }
 }
 
-/*
-// ✅ 스플래시 화면 (현재는 주석 처리됨 - 필요시 다시 사용 가능)
-class SplashScreen extends StatefulWidget {
-  @override
-  _SplashScreenState createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Timer(Duration(seconds: 2), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFEFEAE5),
-      body: Center(
-        child: Image.asset(
-          'assets/logo.png', // 로고 이미지 경로
-          width: 180,
-        ),
-      ),
-    );
-  }
-}
-*/
-
-// ✅ 홈 화면
+// 홈 화면
 class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: AppColors.appbarcolor,
-        title: Text(
+        title: const Text(
           '수어메이트',
           style: TextStyle(
             fontWeight: FontWeight.bold,
@@ -83,20 +56,18 @@ class HomeScreen extends StatelessWidget {
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.settings),
+          icon: const Icon(Icons.settings),
           onPressed: () {
             Navigator.push(
               context,
               PageRouteBuilder(
                 pageBuilder: (context, animation, secondaryAnimation) =>
-                    SettingsPage(),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
+                const SettingsPage(),
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
                   const begin = Offset(-1.0, 0.0);
                   const end = Offset.zero;
                   const curve = Curves.easeInOut;
-                  var tween =
-                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                  var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
                   return SlideTransition(
                     position: animation.drive(tween),
                     child: child,
@@ -108,12 +79,9 @@ class HomeScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.person),
+            icon: const Icon(Icons.person),
             onPressed: () {
-              // TODO: 로그인 상태 체크 후 분기처리 (나중에 연동 예정)
-              /*
-              final prefs = await SharedPreferences.getInstance();
-              final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
+              final isLoggedIn = Provider.of<LoginState>(context, listen: false).isLoggedIn;
 
               if (isLoggedIn) {
                 Navigator.push(
@@ -126,18 +94,12 @@ class HomeScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (context) => LoginPage()),
                 );
               }
-              */
-              // 현재는 무조건 로그인 페이지로 이동
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
-              );
             },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
+      body: const Padding(
+        padding: EdgeInsets.all(20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -152,17 +114,17 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ✅ 커스텀 버튼 위젯
+// 커스텀 버튼 위젯
 class CustomButton extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  CustomButton({required this.icon, required this.text});
+  const CustomButton({super.key, required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(bottom: 20),
+      margin: const EdgeInsets.only(bottom: 20),
       width: double.infinity,
       height: 60,
       decoration: BoxDecoration(
@@ -177,26 +139,26 @@ class CustomButton extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => LearningPage()),
             );
+          } else if (text == '게임') {
+            // 추후 게임 페이지 연결
+          } else if (text == '단어장') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => DictionaryPage()),
+            );
+          } else if (text == '한국수어사전') {
+            // 추후 사전 페이지 연결
           }
-          if (text == '게임') {
-            // Navigator.push(
-            //   context,
-            //   MaterialPageRoute(builder: (context) => LearningDetailPage()),
-            // );
-          }
-          // '단어장', '한국수어사전' 등 다른 메뉴는 추후 연동
         },
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.black,
-        ),
+        style: TextButton.styleFrom(foregroundColor: Colors.black),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 30),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Text(
               text,
-              style: TextStyle(fontSize: 20),
+              style: const TextStyle(fontSize: 20),
             ),
           ],
         ),
@@ -205,26 +167,3 @@ class CustomButton extends StatelessWidget {
   }
 }
 
-// import 'package:flutter/material.dart';
-// import 'package:firebase_core/firebase_core.dart';
-// import 'constants/uploadpage.dart'; // 파일 경로 맞게 import
-//
-// void main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//   await Firebase.initializeApp();
-//   runApp(const MyApp());
-// }
-//
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       home: UploadPage(
-//         category: '자음',        // ✅ 여기 카테고리명 입력
-//         documentId: 'ㅎ',         // ✅ 여기 문서 ID 입력
-//       ),
-//     );
-//   }
-// }
