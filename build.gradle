@@ -38,6 +38,11 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+	implementation 'software.amazon.awssdk:s3:2.17.89'  // AWS SDK (NCP S3 호환)
+	implementation 'software.amazon.awssdk:auth'
+	implementation 'software.amazon.awssdk:regions'
+
+
 
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'

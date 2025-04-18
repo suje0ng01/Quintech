@@ -11,5 +11,4 @@ import lombok.Setter;
 public class PracticeQuestionDto {
     private ContentType contentType;  // CONSONANT, VOWEL
     private String question;          // ex. "ㄱ"
-    private String videoUrl;          // ex. "https://...firebase/ㄱ.mp4"
 }
