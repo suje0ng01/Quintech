@@ -204,3 +204,27 @@ class CustomButton extends StatelessWidget {
     );
   }
 }
+
+// import 'package:flutter/material.dart';
+// import 'package:firebase_core/firebase_core.dart';
+// import 'constants/uploadpage.dart'; // 파일 경로 맞게 import
+//
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   await Firebase.initializeApp();
+//   runApp(const MyApp());
+// }
+//
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       home: UploadPage(
+//         category: '자음',        // ✅ 여기 카테고리명 입력
+//         documentId: 'ㅎ',         // ✅ 여기 문서 ID 입력
+//       ),
+//     );
+//   }
+// }
