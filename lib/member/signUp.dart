@@ -241,8 +241,28 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
             SizedBox(width: 10),
             ElevatedButton(
-              onPressed: () {
-                _showMessage('중복 확인 기능은 아직 구현되지 않았습니다.');
+              onPressed: () async {
+                final email = _emailController.text.trim();
+
+                if (email.isEmpty) {
+                  _showMessage('이메일을 입력해주세요.');
+                  return;
+                }
+
+                try {
+                  final querySnapshot = await _firestore
+                      .collection('users')
+                      .where('email', isEqualTo: email)
+                      .get();
+
+                  if (querySnapshot.docs.isNotEmpty) {
+                    _showMessage('이미 사용 중인 이메일입니다.');
+                  } else {
+                    _showMessage('사용 가능한 이메일입니다.');
+                  }
+                } catch (e) {
+                  _showMessage('오류 발생: $e');
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.grey.shade700,
@@ -258,4 +278,4 @@ class _SignUpPageState extends State<SignUpPage> {
       ],
     );
   }
-}
+  }
