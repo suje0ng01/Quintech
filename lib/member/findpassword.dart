@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 🔥 Firestore 추가
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/constants.dart';
+import 'login.dart'; // 로그인 페이지 import
 
 class FindPasswordPage extends StatefulWidget {
   @override
@@ -12,7 +13,7 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
   final emailController = TextEditingController();
   bool _isLoading = false;
 
-  // ✅ 비밀번호 재설정 메일 전송 함수 (Firestore에서 이메일 존재 여부 확인)
+  // ✅ 비밀번호 재설정 메일 전송 함수
   Future<void> sendPasswordReset() async {
     final email = emailController.text.trim();
 
@@ -26,9 +27,8 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
     });
 
     try {
-      // 🔍 Firestore에서 해당 이메일로 가입된 유저가 있는지 확인
       final snapshot = await FirebaseFirestore.instance
-          .collection('users') // ⚠️ 컬렉션 이름이 실제와 다를 경우 수정
+          .collection('users')
           .where('email', isEqualTo: email)
           .limit(1)
           .get();
@@ -36,9 +36,8 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
       if (snapshot.docs.isEmpty) {
         _showSnackBar('해당 이메일로 가입된 계정이 없습니다.');
       } else {
-        // 📤 비밀번호 재설정 이메일 전송
         await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-        _showSnackBar('비밀번호 재설정 메일을 보냈습니다!\n메일함을 확인해주세요.');
+        _showSuccessDialog(); // 성공 시 팝업 띄우기
       }
     } catch (e) {
       _showSnackBar('오류가 발생했습니다. 다시 시도해주세요.');
@@ -53,6 +52,40 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  // ✅ 비밀번호 재설정 성공시 보여줄 팝업
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('비밀번호 재설정 메일 발송'),
+          content: Text('비밀번호 재설정 메일을 보냈습니다.\n메일함을 확인해주세요.'),
+          backgroundColor: Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // 팝업 닫기
+                Navigator.of(context).pop(); // FindPasswordPage 닫기
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                );
+              },
+              child: Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    super.dispose();
   }
 
   @override
@@ -137,7 +170,10 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
                             ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                             : const Text(
                           '비밀번호 재설정',
