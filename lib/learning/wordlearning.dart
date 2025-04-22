@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../constants/constants.dart';
 
 class LearningDetailPage extends StatefulWidget {
@@ -15,6 +16,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   List<DocumentSnapshot> _letters = [];
   bool _isLoading = true;
   int currentIndex = 0;
+  VideoPlayerController? _videoController; // ✅ 비디오 컨트롤러 추가
 
   @override
   void initState() {
@@ -22,11 +24,17 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     fetchLetters();
   }
 
+  @override
+  void dispose() {
+    _videoController?.dispose(); // ✅ 페이지 나갈 때 비디오 리소스 해제
+    super.dispose();
+  }
+
   Future<void> fetchLetters() async {
     final snapshot = await FirebaseFirestore.instance
-        .collection('learningdata')     // 최상위 컬렉션
-        .doc('category')                // category 문서
-        .collection(widget.category)    // 넘겨받은 카테고리
+        .collection('learningdata') // 최상위 컬렉션
+        .doc('category')            // category 문서
+        .collection(widget.category) // 넘겨받은 카테고리
         .orderBy('question')
         .get();
 
@@ -34,6 +42,60 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       _letters = snapshot.docs;
       _isLoading = false;
     });
+
+    if (_letters.isNotEmpty) {
+      await _initializeVideoIfNeeded();
+    }
+  }
+
+  Future<void> _initializeVideoIfNeeded() async {
+    final doc = _letters[currentIndex];
+    final String url = doc['imageUrl'] ?? '';
+
+    if (_isVideo(url)) {
+      _videoController?.dispose();
+      _videoController = VideoPlayerController.network(url);
+      await _videoController!.initialize();
+      _videoController!.setLooping(true); // 반복재생 (원하면 추가)
+      await _videoController!.play();
+      setState(() {});
+    } else {
+      _videoController?.dispose();
+      _videoController = null;
+      setState(() {});
+    }
+  }
+
+  bool _isVideo(String url) {
+    final lowerUrl = url.toLowerCase();
+    return lowerUrl.contains('.mp4') || lowerUrl.contains('.mov') || lowerUrl.contains('.avi');
+  }
+
+
+  void _goToPrevious() async {
+    if (currentIndex > 0) {
+      setState(() {
+        currentIndex--;
+        _isLoading = true;
+      });
+      await _initializeVideoIfNeeded();
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _goToNext() async {
+    if (currentIndex < _letters.length - 1) {
+      setState(() {
+        currentIndex++;
+        _isLoading = true;
+      });
+      await _initializeVideoIfNeeded();
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -116,22 +178,31 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
+                    SizedBox(
                       width: 200,
                       height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.amber[100],
-                        borderRadius: BorderRadius.circular(10),
-                        image: imageUrl.isNotEmpty
-                            ? DecorationImage(
-                          image: NetworkImage(imageUrl),
-                          fit: BoxFit.contain,
-                        )
+                      child: _isVideo(imageUrl)
+                          ? (_videoController != null && _videoController!.value.isInitialized
+                          ? AspectRatio(
+                        aspectRatio: _videoController!.value.aspectRatio,
+                        child: VideoPlayer(_videoController!),
+                      )
+                          : const Center(child: CircularProgressIndicator()))
+                          : Container(
+                        decoration: BoxDecoration(
+                          color: Colors.amber[100],
+                          borderRadius: BorderRadius.circular(10),
+                          image: imageUrl.isNotEmpty
+                              ? DecorationImage(
+                            image: NetworkImage(imageUrl),
+                            fit: BoxFit.contain,
+                          )
+                              : null,
+                        ),
+                        child: imageUrl.isEmpty
+                            ? const Center(child: Text('이미지 없음'))
                             : null,
                       ),
-                      child: imageUrl.isEmpty
-                          ? const Center(child: Text('이미지 없음'))
-                          : null,
                     ),
                   ],
                 ),
@@ -171,23 +242,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back, size: 40),
-                    onPressed: currentIndex > 0
-                        ? () {
-                      setState(() {
-                        currentIndex--;
-                      });
-                    }
-                        : null,
+                    onPressed: _goToPrevious,
                   ),
                   IconButton(
                     icon: const Icon(Icons.arrow_forward, size: 40),
-                    onPressed: currentIndex < _letters.length - 1
-                        ? () {
-                      setState(() {
-                        currentIndex++;
-                      });
-                    }
-                        : null,
+                    onPressed: _goToNext,
                   ),
                 ],
               ),
