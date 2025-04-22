@@ -190,7 +190,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                           : const Center(child: CircularProgressIndicator()))
                           : Container(
                         decoration: BoxDecoration(
-                          color: Colors.amber[100],
+                          // color: Colors.amber[100],
                           borderRadius: BorderRadius.circular(10),
                           image: imageUrl.isNotEmpty
                               ? DecorationImage(
