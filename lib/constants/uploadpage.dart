@@ -33,7 +33,6 @@ class _UploadPageState extends State<UploadPage> {
 
       final file = File(pickedFile.path);
 
-      // ✅ 파일 존재 여부 체크
       if (!await file.exists()) {
         setState(() {
           uploadMessage = '선택한 파일이 존재하지 않습니다.';
@@ -41,24 +40,24 @@ class _UploadPageState extends State<UploadPage> {
         return;
       }
 
-      // ✅ 파일명 고유화 (timestamp 추가)
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${pickedFile.name}';
       final ref = FirebaseStorage.instance.ref('uploads/$fileName');
 
       final uploadTask = ref.putFile(file);
-      await uploadTask; // 반드시 기다려야 함
+      await uploadTask;
 
       final downloadUrl = await ref.getDownloadURL();
 
-      // ✅ Firestore에 저장
+      // ✅ 여기 수정됨: 이미지/비디오 상관없이 imageUrl 필드에 저장
       await FirebaseFirestore.instance
           .collection('learningdata')
           .doc('category')
           .collection(widget.category)
           .doc(widget.documentId)
-          .update({
-        isImage ? 'imageUrl' : 'videoUrl': downloadUrl,
-      });
+          .set({
+        'imageUrl': downloadUrl,               // ✅ 항상 imageUrl 키에 저장
+        'question': widget.documentId,         // ✅ question 필드도 같이 저장
+      }, SetOptions(merge: true));              // ⚡ 기존 데이터 유지 병합
 
       setState(() {
         uploadMessage = '업로드 및 Firestore 저장 성공!';

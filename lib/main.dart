@@ -167,3 +167,29 @@ class CustomButton extends StatelessWidget {
   }
 }
 
+
+//
+// import 'package:flutter/material.dart';
+// import 'package:firebase_core/firebase_core.dart';
+// import 'constants/uploadpage.dart'; // ✅ 업로드하는 UploadPage import
+//
+// void main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   await Firebase.initializeApp();
+//   runApp(const MyApp());
+// }
+//
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       debugShowCheckedModeBanner: false,
+//       home: UploadPage(
+//         category: '경제생활',        // ✅ 업로드할 때 사용할 카테고리 이름
+//         documentId: '집값',         // ✅ 업로드할 때 사용할 문서 ID (ex: ㄱ, ㄴ, ㄷ 같은 것)
+//       ),
+//     );
+//   }
+// }
