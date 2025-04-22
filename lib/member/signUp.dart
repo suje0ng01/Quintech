@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 
-import '../constants/constants.dart'; // 기존대로 유지
+import '../constants/constants.dart';
+import 'login.dart'; // 기존 유지
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -44,18 +45,15 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     try {
-      // 만약 앱에서 Firebase.initializeApp()이 누락된 경우를 대비한 방어 코드
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
       }
 
-      // 회원가입 시도
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Firestore에 정보 저장
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'name': name,
@@ -63,7 +61,7 @@ class _SignUpPageState extends State<SignUpPage> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      _showMessage('회원가입 성공!');
+      _showSuccessDialog();
     } on FirebaseAuthException catch (e) {
       _showMessage('회원가입 실패: ${e.code} - ${e.message}');
     } catch (e) {
@@ -77,6 +75,31 @@ class _SignUpPageState extends State<SignUpPage> {
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 밖 터치해도 안닫힘
+      builder: (context) {
+        return AlertDialog(
+          title: Text('회원가입 완료'),
+          content: Text('회원가입이 성공적으로 완료되었습니다.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // 팝업 닫기
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                );
+              },
+              child: Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -106,31 +129,32 @@ class _SignUpPageState extends State<SignUpPage> {
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTextField('이름'),
-                    SizedBox(height: 15),
-                    _buildEmailField(),
-                    SizedBox(height: 15),
-                    _buildTextField('비밀번호', obscureText: true),
-                    SizedBox(height: 15),
-                    _buildTextField('비밀번호 확인', obscureText: true),
-                    SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTextField('이름', _nameController),
+                      SizedBox(height: 15),
+                      _buildEmailField(),
+                      SizedBox(height: 15),
+                      _buildTextField('비밀번호', _passwordController, obscureText: true),
+                      SizedBox(height: 15),
+                      _buildTextField('비밀번호 확인', _confirmPasswordController, obscureText: true),
+                      SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
@@ -150,20 +174,33 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 
-  Widget _buildTextField(String label, {bool obscureText = false}) {
+  Widget _buildTextField(String label, TextEditingController controller, {bool obscureText = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 16)),
         SizedBox(height: 5),
         TextField(
+          controller: controller,
           obscureText: obscureText,
           decoration: InputDecoration(
             hintText: '입력',
-            border: OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: BorderSide(color: Colors.grey, width: 1),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(5),
+              borderSide: BorderSide(color: Colors.black, width: 2),
+            ),
           ),
         ),
       ],
@@ -204,7 +241,6 @@ class _SignUpPageState extends State<SignUpPage> {
             SizedBox(width: 10),
             ElevatedButton(
               onPressed: () {
-                // 이메일 중복 확인은 나중에 구현 예정
                 _showMessage('중복 확인 기능은 아직 구현되지 않았습니다.');
               },
               style: ElevatedButton.styleFrom(
