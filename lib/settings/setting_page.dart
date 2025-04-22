@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quintech/constants/constants.dart';
 import 'package:quintech/main.dart';
 import '../member/profilepage.dart';
 import '../member/login.dart';
@@ -25,10 +26,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow[600],
+        backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '설정',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(
