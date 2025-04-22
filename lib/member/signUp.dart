@@ -85,6 +85,7 @@ class _SignUpPageState extends State<SignUpPage> {
         return AlertDialog(
           title: Text('회원가입 완료'),
           content: Text('회원가입이 성공적으로 완료되었습니다.'),
+          backgroundColor: Colors.white,
           actions: [
             TextButton(
               onPressed: () {
