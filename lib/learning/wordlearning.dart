@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:camera/camera.dart';
 import '../constants/constants.dart';
 
 class LearningDetailPage extends StatefulWidget {
-  final String category; // ✅ 카테고리 받기
+  final String category;
 
   const LearningDetailPage({Key? key, required this.category}) : super(key: key);
 
@@ -16,25 +17,31 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   List<DocumentSnapshot> _letters = [];
   bool _isLoading = true;
   int currentIndex = 0;
-  VideoPlayerController? _videoController; // ✅ 비디오 컨트롤러 추가
+
+  VideoPlayerController? _videoController;
+  CameraController? _cameraController;
+  List<CameraDescription>? _cameras;
+  bool _isCameraInitialized = false;
 
   @override
   void initState() {
     super.initState();
     fetchLetters();
+    _initCamera();
   }
 
   @override
   void dispose() {
-    _videoController?.dispose(); // ✅ 페이지 나갈 때 비디오 리소스 해제
+    _videoController?.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
   Future<void> fetchLetters() async {
     final snapshot = await FirebaseFirestore.instance
-        .collection('learningdata') // 최상위 컬렉션
-        .doc('category')            // category 문서
-        .collection(widget.category) // 넘겨받은 카테고리
+        .collection('learningdata')
+        .doc('category')
+        .collection(widget.category)
         .orderBy('question')
         .get();
 
@@ -56,7 +63,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       _videoController?.dispose();
       _videoController = VideoPlayerController.network(url);
       await _videoController!.initialize();
-      _videoController!.setLooping(true); // 반복재생 (원하면 추가)
+      _videoController!.setLooping(true);
       await _videoController!.play();
       setState(() {});
     } else {
@@ -71,6 +78,26 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     return lowerUrl.contains('.mp4') || lowerUrl.contains('.mov') || lowerUrl.contains('.avi');
   }
 
+  Future<void> _initCamera() async {
+    _cameras = await availableCameras();
+
+    // 전면 카메라 선택
+    final frontCamera = _cameras?.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.front,
+      orElse: () => _cameras!.first,
+    );
+
+    _cameraController = CameraController(
+      frontCamera!,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+
+    await _cameraController!.initialize();
+    setState(() {
+      _isCameraInitialized = true;
+    });
+  }
 
   void _goToPrevious() async {
     if (currentIndex > 0) {
@@ -141,7 +168,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 진행도 표시
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
               child: Column(
@@ -157,7 +183,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
               ),
             ),
 
-            // 수어 학습 카드
             Card(
               margin: const EdgeInsets.all(16),
               elevation: 4,
@@ -165,17 +190,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Text(
-                      '따라 해보세요',
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    const Text('따라 해보세요', style: TextStyle(fontSize: 18)),
                     const SizedBox(height: 8),
                     Text(
                       letter,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
@@ -190,7 +209,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                           : const Center(child: CircularProgressIndicator()))
                           : Container(
                         decoration: BoxDecoration(
-                          // color: Colors.amber[100],
                           borderRadius: BorderRadius.circular(10),
                           image: imageUrl.isNotEmpty
                               ? DecorationImage(
@@ -209,32 +227,39 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
               ),
             ),
 
-            // 실시간 손 인식 박스 (임시 박스)
+            // 카메라 박스
             Container(
               width: 200,
               height: 200,
               margin: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.black),
-                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.camera_alt, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text(
-                      '사용자의 손 모양을\n실시간으로 인식',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+              child: _isCameraInitialized && _cameraController != null
+                  ? ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: AspectRatio(
+                  aspectRatio: _cameraController!.value.aspectRatio,
+                  child: ClipRect(
+                    child: OverflowBox(
+                      alignment: Alignment.center,
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _cameraController!.value.previewSize!.height,
+                          height: _cameraController!.value.previewSize!.width,
+                          child: CameraPreview(_cameraController!),
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              )
+                  : const Center(child: CircularProgressIndicator()),
             ),
 
-            // 페이지 이동 버튼
+            // 이동 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Row(
