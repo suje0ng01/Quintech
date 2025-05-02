@@ -28,6 +28,8 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  firebase_auth: ^5.5.2
+  firebase_core: ^3.13.0
   flutter:
     sdk: flutter
   video_player: ^2.7.0
@@ -38,9 +40,12 @@ dependencies:
   provider: ^6.1.4
   font_awesome_flutter: ^10.8.0
   shared_preferences: ^2.5.3
-  firebase_core: ^3.13.0
-  firebase_auth: ^5.5.2
   cloud_firestore: ^5.6.6
+  file_picker: ^10.1.2
+  image_picker: ^1.1.2
+  firebase_storage: ^12.4.5
+  camera: ^0.11.1
+
 
 dev_dependencies:
   flutter_test:

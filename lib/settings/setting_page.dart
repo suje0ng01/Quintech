@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; //LoginState 사용을 위한 provider
-
+import 'package:quintech/constants/constants.dart';
 import 'package:quintech/main.dart';
 import '../member/profilepage.dart';
 import '../member/login.dart';
@@ -8,7 +7,7 @@ import '../state/login_state.dart'; // 로그인 상태
 import 'setting_info.dart';
 import 'setting_faq.dart';
 import 'setting_member.dart';
-
+import 'package:provider/provider.dart';
 import '../data/dummy_member.dart'; //TODO : 더미 회원정보 추후 삭제
 
 //설정 페이지
@@ -27,16 +26,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow[600],
+        backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '설정',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.home, color: Colors.black),
           onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen())); 
+            Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
           },
         ),
         actions: [
@@ -46,7 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     backgroundImage: NetworkImage(user.profileImageUrl),
                   )
                 : const Icon(Icons.account_circle, size: 36, color: Colors.black), // 로그아웃 상태일 때 아이콘 변경
-             onPressed: () {  
+             onPressed: () {
               final isLoggedIn = Provider.of<LoginState>(context, listen: false).isLoggedIn;
 
               if (isLoggedIn) {

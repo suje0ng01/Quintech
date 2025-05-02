@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:quintech/learning/wordlearning.dart';
+import '../constants/constants.dart';
 
 class LearningPage extends StatelessWidget {
+  const LearningPage({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFAF6F1),
+      backgroundColor: const Color(0xFFFAF6F1),
       appBar: AppBar(
-        backgroundColor: Color(0xFFF9D778),
-        title: Text(
+        backgroundColor: AppColors.appbarcolor,
+        title: const Text(
           '학습',
           style: TextStyle(
             color: Colors.white,
@@ -17,35 +21,31 @@ class LearningPage extends StatelessWidget {
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
-        actions: [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.person, color: Colors.white),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildInfoBox(),
-            SizedBox(height: 20),
-            _buildChapterCard('지문자', ['모음', '자음'], 1.0),
-            _buildChapterCard('생활', ['식생활', '주생활'], 1.0),
-            _buildChapterCard('동식물', [], 0.0),
-            _buildChapterCard('인간', [], 0.0),
-            _buildChapterCard('사회생활', [], 0.0),
-            _buildChapterCard('삶', [], 0.0),
-            _buildChapterCard('문화', [], 0.0),
-            _buildChapterCard('개념', [], 0.0),
-            _buildChapterCard('기타', [], 0.0),
-            _buildChapterCard('경제생활', [], 0.0),
+            const SizedBox(height: 20),
+            _buildChapterCard(context, '모음', 0.0),
+            _buildChapterCard(context, '자음', 0.3),
+            _buildChapterCard(context, '식생활', 1.0),
+            _buildChapterCard(context, '주생활', 0.0),
+            _buildChapterCard(context, '동식물', 0.0),
+            _buildChapterCard(context, '인간', 0.0),
+            _buildChapterCard(context, '사회생활', 0.0),
+            _buildChapterCard(context, '삶', 0.0),
+            _buildChapterCard(context, '문화', 0.0),
+            _buildChapterCard(context, '개념', 0.0),
+            _buildChapterCard(context, '기타', 0.0),
+            _buildChapterCard(context, '경제생활', 0.0),
           ],
         ),
       ),
@@ -54,20 +54,16 @@ class LearningPage extends StatelessWidget {
 
   Widget _buildInfoBox() {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.black12),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text('📌 이용 안내', style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
+          Text('📌 이용 안내', style: TextStyle(fontWeight: FontWeight.bold)),
           SizedBox(height: 6),
           Text('• 각 챕터별 80% 이상 정답 시 학습 완료로 인정됩니다.'),
           Text('• 주제 진행도 = 해당 주제의 완료된 챕터 수 비율 (%)'),
@@ -76,54 +72,69 @@ class LearningPage extends StatelessWidget {
     );
   }
 
-  Widget _buildChapterCard(String title, List<String> items, double progress) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: ExpansionTile(
-        title: Row(
+  Widget _buildChapterCard(BuildContext context, String title, double progress) {
+    String status;
+    Color statusColor;
+
+    if (progress == 0.0) {
+      status = '학습 전';
+      statusColor = Colors.grey;
+    } else if (progress < 1.0) {
+      status = '학습 중';
+      statusColor = Colors.orange;
+    } else {
+      status = '학습 완료';
+      statusColor = Colors.green;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LearningDetailPage(category: title), // ✅ 카테고리 넘기기
+          ),
+        );
+      },
+      child: Container(
+        height: 60,
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
               ),
             ),
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              height: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Color(0xFFF9D778),
-                borderRadius: BorderRadius.circular(10),
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(30),
               ),
-              child: Text('${(progress * 100).toInt()}%', style: TextStyle(fontSize: 12)),
+              child: Text(
+                status,
+                style: TextStyle(
+                  color: statusColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
-        children: items.map((e) => _buildCheckItem(e)).toList(),
       ),
-    );
-  }
-
-  Widget _buildCheckItem(String text) {
-    bool isChecked = text != '자기소개'; // 예시로 일부만 체크
-    bool isEnabled = text != '자기ㅏ소개';
-
-    return CheckboxListTile(
-      value: isChecked,
-      onChanged: isEnabled ? (val) {} : null,
-      title: Text(
-        text,
-        style: TextStyle(
-          color: isEnabled ? Colors.black : Colors.black38,
-        ),
-      ),
-      controlAffinity: ListTileControlAffinity.leading,
     );
   }
 }

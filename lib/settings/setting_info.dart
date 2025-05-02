@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quintech/constants/constants.dart';
 
 //공지사항 페이지
 class NoticePage extends StatelessWidget {
@@ -23,10 +24,10 @@ class NoticePage extends StatelessWidget {
     ];
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow[600],
+        backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '공지사항',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(

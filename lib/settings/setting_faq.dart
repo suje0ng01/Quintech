@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:quintech/constants/constants.dart';
 
 //FAQ 페이지
 class FAQPage extends StatelessWidget {
@@ -24,10 +25,10 @@ class FAQPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow[600],
+        backgroundColor: AppColors.appbarcolor,
         title: const Text(
           'FAQ',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(

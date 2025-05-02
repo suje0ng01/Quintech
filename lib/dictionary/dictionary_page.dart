@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:quintech/main.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
-
 import '../member/profilepage.dart';
 import '../state/login_state.dart';
 import '../settings/setting_page.dart';

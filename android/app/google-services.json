@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "285403881637",
+    "project_id": "quintech-fa669",
+    "storage_bucket": "quintech-fa669.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:285403881637:android:c0619e14b783a6e072ed4c",
+        "android_client_info": {
+          "package_name": "com.example.quintech"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZURpjJGucnePJP6IB_-KOGj4TeTKELas"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

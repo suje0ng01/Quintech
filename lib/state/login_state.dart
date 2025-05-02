@@ -10,23 +10,23 @@ class LoginState with ChangeNotifier {
     _loadLoginStatus();
   }
 
-  void _loadLoginStatus() async {
+  Future<void> _loadLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     _isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
     notifyListeners();
   }
 
-  void logIn() async {
-    _isLoggedIn = true;
+  Future<void> logIn() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', true);
+    _isLoggedIn = true;
     notifyListeners();
   }
 
-  void logOut() async {
-    _isLoggedIn = false;
+  Future<void> logOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isLoggedIn', false);
+    _isLoggedIn = false;
     notifyListeners();
   }
 }

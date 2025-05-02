@@ -26,15 +26,6 @@ class ProfilePage extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
-
-        actions: [
-          IconButton(
-            icon: Icon(Icons.home, color: Colors.white),
-            onPressed: () {
-              Navigator.pop(context); // 홈으로
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
