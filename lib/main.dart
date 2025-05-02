@@ -92,6 +92,8 @@ class HomeScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => LoginPage()),
+                  // MaterialPageRoute(builder: (context) => ProfilePage()),
+
                 );
               }
             },
@@ -187,8 +189,8 @@ class CustomButton extends StatelessWidget {
 //     return MaterialApp(
 //       debugShowCheckedModeBanner: false,
 //       home: UploadPage(
-//         category: '경제생활',        // ✅ 업로드할 때 사용할 카테고리 이름
-//         documentId: '집값',         // ✅ 업로드할 때 사용할 문서 ID (ex: ㄱ, ㄴ, ㄷ 같은 것)
+//         category: '인간',        // ✅ 업로드할 때 사용할 카테고리 이름
+//         documentId: '예쁘다(곱다)',         // ✅ 업로드할 때 사용할 문서 ID (ex: ㄱ, ㄴ, ㄷ 같은 것)
 //       ),
 //     );
 //   }
