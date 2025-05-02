@@ -6,6 +6,21 @@ class NoticePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 공지사항 리스트
+    final List<Map<String, String>> noticeList = [
+      {
+        'title': '앱 정식 출시 예정 안내',
+        'content': '현재 앱은 베타 버전이며, 정식 출시는 6월 중 예정입니다. 사용자의 피드백을 바탕으로 기능 개선 중입니다.',
+      },
+      {
+        'title': '수어 인식 정확도 개선 업데이트 (v0.9.3)',
+        'content': '인공지능 수어 인식 모델이 개선되었습니다. \n손 모양이 조금 달라도 인식이 가능해졌습니다.',
+      },
+      {
+        'title': '서버 점검 안내',
+        'content': '5월 5일 오전 2시부터 4시까지 서버 점검이 예정되어 있어, 해당 시간에는 학습 기능 이용이 제한됩니다.',
+      },
+    ];
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.yellow[600],
@@ -22,17 +37,18 @@ class NoticePage extends StatelessWidget {
         ),
       ),
       body: ListView.separated(
-        itemCount: 20, // 공지사항 20개 생성
+        itemCount: noticeList.length,
         separatorBuilder: (context, index) => const Divider(), // 구분선 추가
         itemBuilder: (context, index) {
+          final notice = noticeList[index];
           return ListTile(
-            title: Text('공지사항 ${index + 1}'), // 공지사항 1, 공지사항 2, ...
+            title: Text(notice['title']!), 
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => NoticeDetailPage(noticeNumber: index + 1),
+                  builder: (context) => NoticeDetailPage(notice: notice),
                 ),
               );
             },
@@ -46,9 +62,9 @@ class NoticePage extends StatelessWidget {
 
 // 공지사항 상세 페이지
 class NoticeDetailPage extends StatelessWidget {
-  final int noticeNumber;
+  final Map<String, String> notice;
 
-  const NoticeDetailPage({super.key, required this.noticeNumber});
+  const NoticeDetailPage({super.key, required this.notice});
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +72,7 @@ class NoticeDetailPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.yellow[600],
         title: Text(
-          '공지사항 $noticeNumber',
+          notice['title']!,
           style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -67,17 +83,11 @@ class NoticeDetailPage extends StatelessWidget {
           },
         ),
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: List.generate(
-            50, // 공지사항 내용을 50줄 생성해서 스크롤 테스트 가능하게 함
-            (index) => Text(
-              '공지사항 내용 테스트 ${index + 1}',
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
+        child: Text(
+          notice['content']!,
+          style: const TextStyle(fontSize: 16),
         ),
       ),
     );
