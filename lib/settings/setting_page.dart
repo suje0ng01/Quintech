@@ -38,31 +38,6 @@ class _SettingsPageState extends State<SettingsPage> {
             Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
           },
         ),
-        actions: [
-          IconButton(
-            icon: isLoggedIn
-                ? CircleAvatar(
-                    backgroundImage: NetworkImage(user.profileImageUrl),
-                  )
-                : const Icon(Icons.account_circle, size: 36, color: Colors.black), // 로그아웃 상태일 때 아이콘 변경
-             onPressed: () {
-              final isLoggedIn = Provider.of<LoginState>(context, listen: false).isLoggedIn;
-
-              if (isLoggedIn) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfilePage()),
-                );
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                );
-              }
-            },
-          ),
-          const SizedBox(width: 10),
-        ],
       ),
       body: ListView(
         children: [

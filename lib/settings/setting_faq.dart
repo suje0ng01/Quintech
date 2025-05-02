@@ -7,13 +7,21 @@ class FAQPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> faqList = List.generate(
-      20,
-      (index) => {
-        'question': '자주 묻는 질문 ${index + 1}',
-        'answer': '이것은 자주 묻는 질문 ${index + 1}에 대한 답변입니다.\n' * 3,
-      },
-    );
+    //FAQ 리스트
+    final List<Map<String, String>> faqList = [
+    {
+      'question': '이 앱은 무료로 사용할 수 있나요?',
+      'answer': '네, 현재는 모든 기능을 무료로 제공하고 있으며, 앞으로도 핵심 학습 기능은 무료로 유지할 예정입니다.',
+    },
+    {
+      'question': '수어 인식이 잘 안 되는 경우엔 어떻게 해야 하나요?',
+      'answer': '조명이 밝은 환경에서, 손을 화면 중앙에 위치시키고 손 모양을 천천히 보여주세요. \n그래도 인식이 어렵다면 학습 영상과 비교해 다시 시도해보세요.',
+    },
+    {
+      'question': '수어를 처음 배우는 사람도 사용할 수 있나요?',
+      'answer': '물론입니다! \n이 앱은 초보자도 쉽게 수어를 배울 수 있도록 설계되었으며, 각 단어마다 수어 영상과 실시간 피드백 기능이 포함되어 있습니다.',
+    },
+  ];
 
     return Scaffold(
       appBar: AppBar(
@@ -51,7 +59,7 @@ class FAQPage extends StatelessWidget {
               );
             },
           ),
-          Positioned(   //문의하기 버튼 하단에 고정정
+          Positioned(   //문의하기 버튼 하단에 고정
             bottom: 10,
             left: 20,
             right: 20,
