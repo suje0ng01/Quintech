@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:quintech/member/signUp.dart';
 import 'package:quintech/constants/constants.dart';
 import '../main.dart';
+import '../state/login_state.dart';
 import 'findpassword.dart';
 import 'profilepage.dart'; // 로그인 성공 시 이동할 화면
 
@@ -27,6 +29,8 @@ class _LoginPageState extends State<LoginPage> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      await Provider.of<LoginState>(context, listen: false).logIn();
 
       Navigator.of(context).pop(); // 로딩 닫기
 
