@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:quintech/main.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
+import '../constants/constants.dart';
 import '../member/profilepage.dart';
 import '../state/login_state.dart';
 import '../settings/setting_page.dart';
@@ -70,11 +71,11 @@ class _DictionaryPageState extends State<DictionaryPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.yellow[600],
+          backgroundColor: AppColors.appbarcolor,
           centerTitle: true,
           title: const Text(
             '단어장',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
