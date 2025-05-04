@@ -1,83 +1,112 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/constants.dart';
 
-import '../data/dummy_member.dart';//TODO : 더미 유저 데이터
-
-
 class ProfilePage extends StatelessWidget {
-  ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({Key? key}) : super(key: key);
+
+  Future<Map<String, dynamic>> _getUserInfo() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final data = doc.data();
+      if (data != null) return data;
+    }
+    throw Exception('사용자 정보를 불러올 수 없습니다.');
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = DummyUser.example;  //더미 유저 데이터 사용
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: AppColors.appbarcolor,
-        title: Text(
+        title: const Text(
           '프로필',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
           onPressed: () {
             Navigator.pop(context);
           },
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // 프로필 사진 및 정보
-            Row(
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _getUserInfo(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return const Center(child: Text('사용자 정보를 불러올 수 없습니다.'));
+          }
+
+          final user = snapshot.data!;
+          final name = user['name'] ?? '';
+          final email = user['email'] ?? '';
+          final streak = user['streak'] ?? 0;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(user.profileImageUrl),
-                ),
-                SizedBox(width: 15),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                // 이름 & 이메일만 표시
+                Row(
                   children: [
-                    Text(user.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                    Text(user.email, style: TextStyle(color: Colors.grey)),
+                    const CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.grey,
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
+                    const SizedBox(width: 15),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                        Text(email, style: const TextStyle(color: Colors.grey)),
+                      ],
+                    )
                   ],
-                )
+                ),
+                const SizedBox(height: 30),
+
+                // 학습 일수 (streak)
+                ProfileCard(
+                  icon: Icons.access_time,
+                  title: '$streak일',
+                  subtitle: "학습 일수",
+                ),
+                const SizedBox(height: 15),
+
+                // 학습 단원 (임시)
+                ProfileCard(
+                  icon: Icons.menu_book,
+                  title: "현재 학습 단원",
+                  subtitle: "인사말과 기본 표현 (50%)",
+                  buttonText: "학습 바로 가기",
+                  onButtonPressed: () {
+                    // TODO: 학습 페이지로 이동
+                  },
+                ),
+                const SizedBox(height: 15),
+
+                // 게임 정답률 (임시)
+                const ProfileCard(
+                  icon: Icons.sports_esports,
+                  title: "게임 정답률",
+                  subtitle: "63.7%\n다른 사용자들의 평균 정답률 : 79%",
+                ),
               ],
             ),
-            SizedBox(height: 30),
-
-            // 학습 일수
-            ProfileCard(
-              icon: Icons.access_time,
-              title: '${user.attendanceDays}일',
-              subtitle: "학습 일수",
-            ),
-            SizedBox(height: 15),
-
-            // 현재 학습 단원
-            ProfileCard(
-              icon: Icons.menu_book,
-              title: "현재 학습 단원",
-              subtitle: "인사말과 기본 표현 (50%)",
-              buttonText: "학습 바로 가기",
-              onButtonPressed: () {
-                // 학습 페이지로 이동
-              },
-            ),
-            SizedBox(height: 15),
-
-            // 게임 정답률
-            ProfileCard(
-              icon: Icons.sports_esports,
-              title: "게임 정답률",
-              subtitle: "63.7%\n다른 사용자들의 평균 정답률 : 79%",
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -110,27 +139,29 @@ class ProfileCard extends StatelessWidget {
       child: Column(
         children: [
           Icon(icon, size: 40, color: Colors.black),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             title,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             subtitle,
             style: TextStyle(fontSize: 16, color: Colors.grey[800]),
             textAlign: TextAlign.center,
           ),
           if (buttonText != null) ...[
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             ElevatedButton(
               onPressed: onButtonPressed,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[200],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              )),
-              child: Text(buttonText!, style: TextStyle(color: Colors.black)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.grey[200],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(buttonText!, style: const TextStyle(color: Colors.black)),
             ),
           ]
         ],
