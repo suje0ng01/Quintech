@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../constants/constants.dart';
+
 class MemberInfoPage extends StatelessWidget {
   const MemberInfoPage({super.key});
 
@@ -23,9 +25,12 @@ class MemberInfoPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('회원정보'),
+        backgroundColor: AppColors.appbarcolor,
+        title: const Text(
+          '회원정보',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
-        backgroundColor: Colors.yellow[600],
       ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _getUserInfo(),
