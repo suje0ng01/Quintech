@@ -57,6 +57,7 @@ class _SignUpPageState extends State<SignUpPage> {
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'uid': userCredential.user!.uid,
         'name': name,
+        'nickname': name, // 👈 초기 닉네임을 이름과 동일하게 설정
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
       });
