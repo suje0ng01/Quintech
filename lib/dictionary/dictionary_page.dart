@@ -77,30 +77,11 @@ class _DictionaryPageState extends State<DictionaryPage> {
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black),
+            icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsPage()),
-              );
+              Navigator.pop(context);
             },
           ),
-          actions: [
-            IconButton(
-              icon: isLoggedIn
-                  ? CircleAvatar(
-                      backgroundImage: NetworkImage(user.profileImageUrl),
-                    )
-                  : const Icon(Icons.account_circle, size: 30, color: Colors.black),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfilePage()),
-                );
-              },
-            ),
-            const SizedBox(width: 10),
-          ],
         ),
         body: SafeArea( // 🔐 SafeArea로 전체 감싸기 (디버그 레이아웃 방지)
           child: Column(
