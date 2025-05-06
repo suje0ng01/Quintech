@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              final isLoggedIn = Provider.of<LoginState>(context, listen: false).isLoggedIn;
+              final isLoggedIn = FirebaseAuth.instance.currentUser != null;
               Navigator.push(
                 context,
                 MaterialPageRoute(
