@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/constants.dart';
+import '../settings/setting_member.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -38,18 +39,21 @@ class ProfilePage extends StatelessWidget {
           },
         ),
       ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _getUserInfo(),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(FirebaseAuth.instance.currentUser?.uid)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError || !snapshot.hasData) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: Text('사용자 정보를 불러올 수 없습니다.'));
           }
 
           final user = snapshot.data!;
-          final name = user['name'] ?? '';
+          final nickname = user['nickname'] ?? '';
           final email = user['email'] ?? '';
           final streak = user['streak'] ?? 0;
 
@@ -66,15 +70,28 @@ class ProfilePage extends StatelessWidget {
                       child: Icon(Icons.person, color: Colors.white),
                     ),
                     const SizedBox(width: 15),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                        Text(email, style: const TextStyle(color: Colors.grey)),
-                      ],
-                    )
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          Text(email, style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.settings, color: Colors.black),
+                      tooltip: '회원정보 수정',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const MemberInfoPage()),
+                        );
+                      },
+                    ),
                   ],
                 ),
+
                 const SizedBox(height: 30),
 
                 // 학습 일수 (streak)
