@@ -1,24 +1,54 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/constants.dart';
 
-class MemberInfoPage extends StatelessWidget {
+class MemberInfoPage extends StatefulWidget {
   const MemberInfoPage({super.key});
 
-  Future<Map<String, dynamic>> _getUserInfo() async {
+  @override
+  State<MemberInfoPage> createState() => _MemberInfoPageState();
+}
+
+class _MemberInfoPageState extends State<MemberInfoPage> {
+  final TextEditingController _nicknameController = TextEditingController();
+  Map<String, dynamic>? _userData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final data = doc.data();
-      if (data != null) return data;
+      if (data != null) {
+        setState(() {
+          _userData = data;
+          _nicknameController.text = data['nickname'] ?? '';
+          _isLoading = false;
+        });
+      }
     }
-    throw Exception('회원 정보가 없습니다.');
+  }
+
+  Future<void> _saveNickname() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'nickname': _nicknameController.text.trim(),
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('닉네임이 수정되었습니다.')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -32,40 +62,29 @@ class MemberInfoPage extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _getUserInfo(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('회원 정보를 불러올 수 없습니다.'));
-          }
-
-          final user = snapshot.data!;
-          return Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow('이름', user['name'] ?? ''),
-                _buildInfoRow('닉네임', user['nickname'] ?? ''),
-                _buildInfoRow('이메일', user['email'] ?? ''),
-                const SizedBox(height: 30),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.yellow[600],
-                      foregroundColor: Colors.black,
-                    ),
-                    child: const Text('확인'),
-                  ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('이름', _userData?['name'] ?? ''),
+            _buildNicknameField(),
+            _buildInfoRow('이메일', _userData?['email'] ?? ''),
+            const SizedBox(height: 30),
+            Center(
+              child: ElevatedButton(
+                onPressed: _saveNickname,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.yellow[600],
+                  foregroundColor: Colors.black,
                 ),
-              ],
+                child: const Text('저장'),
+              ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -75,8 +94,29 @@ class MemberInfoPage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         children: [
-          SizedBox(width: 80, child: Text(title, style: TextStyle(fontWeight: FontWeight.bold))),
+          SizedBox(width: 80, child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
           Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNicknameField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Row(
+        children: [
+          const SizedBox(width: 80, child: Text('닉네임', style: TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(
+            child: TextField(
+              controller: _nicknameController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              ),
+            ),
+          ),
         ],
       ),
     );
