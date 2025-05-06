@@ -189,22 +189,22 @@ class _DictionaryPageState extends State<DictionaryPage> {
                                     ),
                                   ),
                                   ...words.map((word) => ListTile(
-                                        title: Text(word),
-                                        trailing: TextButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => WordDetailPage(
-                                                  word: word,
-                                                  videoUrl: wordToVideoMap[word]!, // TODO: Firebase 연동 시 URL로 변경
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          child: const Text('수어 >'),
-                                        ),
-                                      )),
+                                    title: Text(word),
+                                    trailing: TextButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => WordDetailPage(
+                                              word: word,
+                                              videoUrl: wordToVideoMap[word]!, // TODO: Firebase 연동 시 URL로 변경
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('수어 >'),
+                                    ),
+                                  )),
                                 ],
                               );
                             },
@@ -334,9 +334,9 @@ class _WordDetailPageState extends State<WordDetailPage> {
             const SizedBox(height: 40),
             _controller.value.isInitialized
                 ? AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  )
+              aspectRatio: _controller.value.aspectRatio,
+              child: VideoPlayer(_controller),
+            )
                 : const CircularProgressIndicator(),
             const SizedBox(height: 30),
             Text(
