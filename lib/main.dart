@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 
 import 'state/login_state.dart';
@@ -14,7 +11,6 @@ import 'member/profilepage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   runApp(
     MultiProvider(
       providers: [
@@ -23,7 +19,6 @@ void main() async {
       child: const MyApp(),
     ),
   );
-  print('Firebase Initialized');
 }
 
 class MyApp extends StatelessWidget {
@@ -39,68 +34,14 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ✅ 출석 팝업 포함한 HomeScreen
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  bool _didCheckIn = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _handleCheckInOnce();
-  }
-
-  void _handleCheckInOnce() async {
-    if (_didCheckIn) return;
-    _didCheckIn = true;
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final doc = await docRef.get();
-    final data = doc.data();
-    if (data == null) return;
-
-    final today = DateTime.now();
-    final lastCheckIn = (data['lastCheckIn'] as Timestamp?)?.toDate();
-    final isTodayCheckedIn = lastCheckIn != null &&
-        lastCheckIn.year == today.year &&
-        lastCheckIn.month == today.month &&
-        lastCheckIn.day == today.day;
-
-    if (!isTodayCheckedIn) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          title: const Text('출석 완료!'),
-          content: const Text('하루 출석이 완료되었습니다.'),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                await docRef.update({
-                  'streak': (data['streak'] ?? 0) + 1,
-                  'lastCheckIn': FieldValue.serverTimestamp(),
-                });
-                Navigator.of(context).pop();
-              },
-              child: const Text('확인'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final loginState = Provider.of<LoginState>(context);
+    final isLoggedIn = loginState.isLoggedIn;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -135,7 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              final isLoggedIn = FirebaseAuth.instance.currentUser != null;
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -162,7 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// 커스텀 버튼
 class CustomButton extends StatelessWidget {
   final IconData icon;
   final String text;
