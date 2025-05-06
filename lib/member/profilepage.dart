@@ -1,28 +1,28 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../constants/constants.dart';
+import '../state/login_state.dart';
 import '../settings/setting_member.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({Key? key}) : super(key: key);
 
-  Future<Map<String, dynamic>> _getUserInfo() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      final data = doc.data();
-      if (data != null) return data;
-    }
-    throw Exception('사용자 정보를 불러올 수 없습니다.');
-  }
-
   @override
   Widget build(BuildContext context) {
+    final loginState = Provider.of<LoginState>(context);
+
+    // ✅ 아직 초기화 안 됐으면 로딩
+    if (!loginState.isInitialized) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final nickname = loginState.nickname ?? '닉네임 없음';
+    final email = loginState.email ?? '이메일 없음';
+    final streak = 0; // 나중에 서버에서 받아오게 수정 가능
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -39,91 +39,63 @@ class ProfilePage extends StatelessWidget {
           },
         ),
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(FirebaseAuth.instance.currentUser?.uid)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('사용자 정보를 불러올 수 없습니다.'));
-          }
-
-          final user = snapshot.data!;
-          final nickname = user['nickname'] ?? '';
-          final email = user['email'] ?? '';
-          final streak = user['streak'] ?? 0;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Row(
               children: [
-                // 이름 & 이메일만 표시
-                Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 30,
-                      backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          Text(email, style: const TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.settings, color: Colors.black),
-                      tooltip: '회원정보 수정',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const MemberInfoPage()),
-                        );
-                      },
-                    ),
-                  ],
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.grey,
+                  child: Icon(Icons.person, color: Colors.white),
                 ),
-
-                const SizedBox(height: 30),
-
-                // 학습 일수 (streak)
-                ProfileCard(
-                  icon: Icons.access_time,
-                  title: '$streak일',
-                  subtitle: "학습 일수",
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                      Text(email, style: const TextStyle(color: Colors.grey)),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 15),
-
-                // 학습 단원 (임시)
-                ProfileCard(
-                  icon: Icons.menu_book,
-                  title: "현재 학습 단원",
-                  subtitle: "인사말과 기본 표현 (50%)",
-                  buttonText: "학습 바로 가기",
-                  onButtonPressed: () {
-                    // TODO: 학습 페이지로 이동
+                IconButton(
+                  icon: const Icon(Icons.settings, color: Colors.black),
+                  tooltip: '회원정보 수정',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MemberInfoPage()),
+                    );
                   },
-                ),
-                const SizedBox(height: 15),
-
-                // 게임 정답률 (임시)
-                const ProfileCard(
-                  icon: Icons.sports_esports,
-                  title: "게임 정답률",
-                  subtitle: "63.7%\n다른 사용자들의 평균 정답률 : 79%",
                 ),
               ],
             ),
-          );
-        },
+            const SizedBox(height: 30),
+            ProfileCard(
+              icon: Icons.access_time,
+              title: '$streak일',
+              subtitle: "학습 일수",
+            ),
+            const SizedBox(height: 15),
+            ProfileCard(
+              icon: Icons.menu_book,
+              title: "현재 학습 단원",
+              subtitle: "인사말과 기본 표현 (50%)",
+              buttonText: "학습 바로 가기",
+              onButtonPressed: () {
+                // TODO: 학습 페이지로 이동
+              },
+            ),
+            const SizedBox(height: 15),
+            const ProfileCard(
+              icon: Icons.sports_esports,
+              title: "게임 정답률",
+              subtitle: "63.7%\n다른 사용자들의 평균 정답률 : 79%",
+            ),
+          ],
+        ),
       ),
     );
   }
