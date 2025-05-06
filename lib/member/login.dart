@@ -1,12 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:quintech/member/signUp.dart';
-import 'package:quintech/constants/constants.dart';
-import '../main.dart';
+
+import 'signUp.dart';
+import '../constants/constants.dart';
 import '../state/login_state.dart';
 import 'findpassword.dart';
-import 'profilepage.dart'; // 로그인 성공 시 이동할 화면
+import 'profilepage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -25,34 +26,68 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+      final response = await http.post(
+        Uri.parse('http://223.130.136.121:8082/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': emailController.text.trim(),
+          'password': passwordController.text.trim(),
+        }),
       );
 
-      await Provider.of<LoginState>(context, listen: false).logIn();
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // 로딩 다이얼로그 닫기
+      }
 
-      Navigator.of(context).pop(); // 로딩 닫기
+      if (response.statusCode == 200) {
+        print("응답 내용: ${response.body}");
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('로그인 성공!')),
-      );
+        final data = jsonDecode(response.body);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => ProfilePage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      Navigator.of(context).pop(); // 로딩 닫기
+        final token = data['token'];
+        final name = data['name'];
+        final email = data['email'];
+        final nickname = data['nickname'];
+        final userId = data['id'];
 
-      String message = '로그인 실패 😢';
-      if (e.code == 'user-not-found') message = '존재하지 않는 사용자입니다';
-      else if (e.code == 'wrong-password') message = '비밀번호가 틀렸습니다';
+        if (token != null && name != null && email != null && nickname != null && userId != null) {
+          await Provider.of<LoginState>(context, listen: false).logIn(
+            token: token,
+            userId: userId,
+            name: name,
+            email: email,
+            nickname: nickname,
+          );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('로그인 성공!')),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ProfilePage()),
+          );
+        } else {
+          _showMessage("로그인 실패: 사용자 정보 없음");
+        }
+      } else {
+        String message = '로그인 실패 😢';
+        try {
+          final resBody = jsonDecode(response.body);
+          message = resBody['message'] ?? message;
+        } catch (_) {}
+        _showMessage(message);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      _showMessage('오류 발생: $e');
     }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -95,7 +130,6 @@ class _LoginPageState extends State<LoginPage> {
                         hintText: '입력',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide(color: Colors.grey),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
@@ -117,7 +151,6 @@ class _LoginPageState extends State<LoginPage> {
                         hintText: '입력',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide(color: Colors.grey),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(5),
