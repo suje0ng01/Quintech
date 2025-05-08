@@ -5,8 +5,9 @@ import 'package:video_player/video_player.dart';
 import '../member/profilepage.dart';
 import '../state/login_state.dart';
 import '../settings/setting_page.dart';
+import 'package:quintech/constants/constants.dart';
 
-import '../data/dummy_dictionary.dart'; //TODO : 더미데이터 클래스 - firebase 연동 시 삭제
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../data/dummy_member.dart'; //TODO : 더미 사용자 정보 > 추후 삭제
 
 //단어장 페이지
@@ -16,29 +17,21 @@ class DictionaryPage extends StatefulWidget {
 }
 
 class _DictionaryPageState extends State<DictionaryPage> {
+  bool isLoading = true;
+
   final FocusNode searchFocusNode = FocusNode();
   final TextEditingController searchController = TextEditingController();
-
-  //TODO : 더미 데이터 사용 (Firebase 연동 시 교체 예정)
-  final List<String> dummyWords = DummyDictionary.words;
-
-  String searchText = '';
-  late List<String> filteredWords;
-  late Map<String, GlobalKey> sectionKeys;
   final ScrollController scrollController = ScrollController();
 
-  // TODO: 영상 경로 리스트 -> Firebase Storage로 전환 예정
-  final List<String> sampleVideoPaths = [
-    'assets/videos/test_video1.mp4',
-    'assets/videos/test_video2.mp4',
-  ];
-
-  // TODO: 단어별 영상 매핑 -> Firebase URL로 대체 예정
-  late final Map<String, String> wordToVideoMap = DummyDictionary.wordToVideoMap;
+  String searchText = '';
+  List<Map<String, String>> firestoreWords = [];
+  List<String> filteredWords = [];
+  late Map<String, GlobalKey> sectionKeys;
 
   @override
   void initState() {
     super.initState();
+    fetchWordsFromFirebase();
 
     // 강제로 키보드 포커스 제거 (키보드 내려가게 하기)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -46,13 +39,50 @@ class _DictionaryPageState extends State<DictionaryPage> {
       searchController.clear();
     });
 
-    filteredWords = List.from(dummyWords);
-
     // 자음별 위치 저장용 Key 초기화
     sectionKeys = {
       for (var ch in ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'])
         ch: GlobalKey()
     };
+  }
+
+  Future<void> fetchWordsFromFirebase() async {
+    List<String> categories = [
+      '개념', '경제생활', '기타', '동식물', '모음',
+      '문화', '사회생활', '삶', '식생활', '인간',
+      '자음', '주생활'
+    ];
+
+    List<Map<String, String>> allWords = [];
+
+    for (final category in categories) {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('learningdata')
+          .doc('category')
+          .collection(category)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data == null || !data.containsKey('question') || !data.containsKey('imageUrl')) continue;
+
+        final word = data['question'];
+        final videoUrl = data['imageUrl'];
+
+        if (videoUrl != null && videoUrl != '' && word != null) {
+          allWords.add({'word': word, 'videoUrl': videoUrl});
+        }
+      }
+    }
+
+    setState(() {
+      firestoreWords = allWords;
+      filteredWords = allWords
+        .expand((e) => e['word']!.split(',').map((w) => w.trim()))
+        .toSet()
+        .toList();
+        isLoading = false;
+    });
   }
 
   @override
@@ -70,7 +100,7 @@ class _DictionaryPageState extends State<DictionaryPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.yellow[600],
+          backgroundColor: AppColors.appbarcolor,
           centerTitle: true,
           title: const Text(
             '단어장',
@@ -130,9 +160,10 @@ class _DictionaryPageState extends State<DictionaryPage> {
                   onChanged: (value) {
                     setState(() {
                       searchText = value;
-                      filteredWords = dummyWords
-                          .where((word) => word.contains(searchText))
-                          .toList();
+                      filteredWords = firestoreWords
+                        .where((e) => e['word']!.contains(searchText))
+                        .map((e) => e['word']!)
+                        .toList();
                     });
                   },
                 ),
@@ -206,23 +237,29 @@ class _DictionaryPageState extends State<DictionaryPage> {
                                       ),
                                     ),
                                   ),
-                                  ...words.map((word) => ListTile(
-                                        title: Text(word),
-                                        trailing: TextButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => WordDetailPage(
-                                                  word: word,
-                                                  videoUrl: wordToVideoMap[word]!, // TODO: Firebase 연동 시 URL로 변경
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          child: const Text('수어 >'),
-                                        ),
-                                      )),
+                                  ...words.map((word) {
+                                    final videoUrl = firestoreWords.firstWhere(
+                                      (e) => e['word']!.split(',').contains(word),
+                                      orElse: () => {'videoUrl': ''}, // 예외 방지용
+                                    )['videoUrl']!;
+
+                                    return ListTile(
+                                      title: Text(word),
+                                      trailing: TextButton(
+                                        child: const Text('수어 >'),
+                                        onPressed: () {
+                                          print('📹 $word의 영상 URL: $videoUrl');
+
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => WordDetailPage(word: word, videoUrl: videoUrl),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  }).toList(),
                                 ],
                               );
                             },
@@ -235,7 +272,7 @@ class _DictionaryPageState extends State<DictionaryPage> {
               ),
             ],
           ),
-        ),
+        ), 
         bottomNavigationBar: BottomAppBar(
           child: IconButton(
             icon: const Icon(Icons.home, size: 30),
@@ -259,6 +296,8 @@ class _DictionaryPageState extends State<DictionaryPage> {
     };
 
     for (var word in words) {
+      if (word.isEmpty) continue; //빈 문자열 방지
+
       final firstChar = word.characters.first;
       final rawInitial = _getInitialConsonant(firstChar);
       final normalizedInitial = _normalizeInitial(rawInitial);
@@ -298,7 +337,6 @@ class _DictionaryPageState extends State<DictionaryPage> {
 }
 
 //단어장 상세 페이지
-// TODO: Firebase 연동 시 network()로 변경
 class WordDetailPage extends StatefulWidget {
   final String word;
   final String videoUrl;
@@ -318,16 +356,14 @@ class _WordDetailPageState extends State<WordDetailPage> {
   @override
   void initState() {
     super.initState();
-
-    final isNetwork = widget.videoUrl.startsWith('http');
-    _controller = isNetwork
-        ? VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-        : VideoPlayerController.asset(widget.videoUrl);
-
-    _controller.initialize().then((_) {
-      setState(() {});
-      _controller.play();
-    });
+    // 영상인 경우에만 VideoPlayerController 초기화
+    if (widget.videoUrl.endsWith('.mp4') || widget.videoUrl.endsWith('.mov')) {
+      _controller = VideoPlayerController.network(widget.videoUrl);
+      _controller.initialize().then((_) {
+        setState(() {});
+        _controller.play();
+      });
+    }
   }
 
   @override
@@ -338,10 +374,12 @@ class _WordDetailPageState extends State<WordDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isVideo = widget.videoUrl.endsWith('.mp4') || widget.videoUrl.endsWith('.mov');
+
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(),
-        backgroundColor: Colors.yellow[600],
+        backgroundColor: AppColors.appbarcolor,
         elevation: 0,
       ),
       body: Padding(
@@ -350,12 +388,18 @@ class _WordDetailPageState extends State<WordDetailPage> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             const SizedBox(height: 40),
-            _controller.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  )
-                : const CircularProgressIndicator(),
+            isVideo
+              ? (_controller.value.isInitialized
+                  ? AspectRatio(
+                      aspectRatio: _controller.value.aspectRatio,
+                      child: VideoPlayer(_controller),
+                    )
+                  : const CircularProgressIndicator())
+              : Image.network(
+                  widget.videoUrl,
+                  height: 200,
+                  errorBuilder: (_, __, ___) => const Text('영상을 불러올 수 없습니다.'),
+                ),
             const SizedBox(height: 30),
             Text(
               widget.word,

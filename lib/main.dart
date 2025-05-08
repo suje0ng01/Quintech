@@ -8,6 +8,7 @@ import 'learning/learningpage.dart'; // 학습 페이지
 import 'dictionary/dictionary_page.dart'; // 단어장
 import 'member/login.dart'; // 로그인 페이지
 import 'member/profilepage.dart'; // 프로필 페이지
+import 'dictionary/Korean_dictionary_webview.dart'; //한국수어 사전 웹뷰
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -149,7 +150,10 @@ class CustomButton extends StatelessWidget {
               MaterialPageRoute(builder: (context) => DictionaryPage()),
             );
           } else if (text == '한국수어사전') {
-            // 추후 사전 페이지 연결
+            Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (context) => const DictionaryWebViewPage(url: 'https://sldict.korean.go.kr/front/main/main.do'))
+            );
           }
         },
         style: TextButton.styleFrom(foregroundColor: Colors.black),
