@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:quintech/constants/constants.dart'; // ⚠️ 실제 경로에 맞게 수정
+import 'package:quintech/constants/constants.dart'; 
 
 class DictionaryWebViewPage extends StatefulWidget {
   final String url;

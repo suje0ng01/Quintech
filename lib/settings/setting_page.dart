@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:quintech/constants/constants.dart';
 import 'package:quintech/main.dart';
-import '../member/profilepage.dart';
 import '../member/login.dart';
 import '../state/login_state.dart'; // 로그인 상태
 import 'setting_info.dart';
 import 'setting_faq.dart';
 import 'setting_member.dart';
 import 'package:provider/provider.dart';
-import '../data/dummy_member.dart'; //TODO : 더미 회원정보 추후 삭제
 
 //설정 페이지
 class SettingsPage extends StatefulWidget {
@@ -18,11 +19,41 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
+Future<Map<String, dynamic>?> fetchUserDataFromFirestore() async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return null;
+
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(currentUser.uid)
+      .get();
+
+  if (doc.exists) {
+    return doc.data();
+  } else {
+    return null;
+  }
+}
+
 class _SettingsPageState extends State<SettingsPage> {
+  Map<String, dynamic>? userData;
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    final data = await fetchUserDataFromFirestore();
+    setState(() {
+      userData = data;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = Provider.of<LoginState>(context).isLoggedIn;
-    final user = DummyUser.example; //더미 회원 정보
 
     return Scaffold(
       appBar: AppBar(

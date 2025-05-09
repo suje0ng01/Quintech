@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:quintech/main.dart';
-import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
-import '../member/profilepage.dart';
-import '../state/login_state.dart';
-import '../settings/setting_page.dart';
 import 'package:quintech/constants/constants.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../data/dummy_member.dart'; //TODO : 더미 사용자 정보 > 추후 삭제
 
 //단어장 페이지
 class DictionaryPage extends StatefulWidget {
@@ -31,7 +24,10 @@ class _DictionaryPageState extends State<DictionaryPage> {
   @override
   void initState() {
     super.initState();
-    fetchWordsFromFirebase();
+    
+    Future.microtask(() async {
+      await fetchWordsFromFirebase();
+    });
 
     // 강제로 키보드 포커스 제거 (키보드 내려가게 하기)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -64,6 +60,9 @@ class _DictionaryPageState extends State<DictionaryPage> {
 
       for (final doc in snapshot.docs) {
         final data = doc.data();
+        print('📁 카테고리 [$category] - 문서 ID: ${doc.id}');
+        print('📄 데이터: $data');
+
         if (data == null || !data.containsKey('question') || !data.containsKey('imageUrl')) continue;
 
         final word = data['question'];
@@ -74,7 +73,11 @@ class _DictionaryPageState extends State<DictionaryPage> {
         }
       }
     }
-
+    print('📦 최종 불러온 단어 개수: ${allWords.length}');
+    for (var entry in allWords) {
+      print('✔️ 단어: ${entry['word']} / 영상: ${entry['videoUrl']}');
+    }
+    
     setState(() {
       firestoreWords = allWords;
       filteredWords = allWords
@@ -87,9 +90,7 @@ class _DictionaryPageState extends State<DictionaryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoggedIn = Provider.of<LoginState>(context).isLoggedIn;
     final groupedWords = groupByInitialConsonant(filteredWords); // 정렬 및 자음 그룹화
-    final user = DummyUser.example; //더미 회원 정보
 
     return PopScope(
       canPop: true,
