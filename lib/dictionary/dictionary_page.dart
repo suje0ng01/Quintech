@@ -352,17 +352,24 @@ class WordDetailPage extends StatefulWidget {
 
 class _WordDetailPageState extends State<WordDetailPage> {
   late VideoPlayerController _controller;
+  bool isVideo = false;
+  bool isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // 영상인 경우에만 VideoPlayerController 초기화
-    if (widget.videoUrl.endsWith('.mp4') || widget.videoUrl.endsWith('.mov')) {
-      _controller = VideoPlayerController.network(widget.videoUrl);
-      _controller.initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
+
+    isVideo = widget.videoUrl.toLowerCase().contains('.mp4') || widget.videoUrl.toLowerCase().contains('.mov');
+
+    if (isVideo) {
+      _controller = VideoPlayerController.network(widget.videoUrl)
+        ..initialize().then((_) {
+          setState(() {
+            isInitialized = true;
+          });
+          _controller.play();
+          _controller.setLooping(true);
+        });
     }
   }
 
@@ -374,8 +381,22 @@ class _WordDetailPageState extends State<WordDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isVideo = widget.videoUrl.endsWith('.mp4') || widget.videoUrl.endsWith('.mov');
+    Widget mediaWidget;
 
+    if (isVideo) {
+      mediaWidget = AspectRatio(
+        aspectRatio: _controller.value.aspectRatio,
+        child: VideoPlayer(_controller),
+      );
+    } else {
+      mediaWidget = Image.network(
+        widget.videoUrl,
+        height: 200,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            const Text('영상을 불러올 수 없습니다.'),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(),
@@ -388,18 +409,7 @@ class _WordDetailPageState extends State<WordDetailPage> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             const SizedBox(height: 40),
-            isVideo
-              ? (_controller.value.isInitialized
-                  ? AspectRatio(
-                      aspectRatio: _controller.value.aspectRatio,
-                      child: VideoPlayer(_controller),
-                    )
-                  : const CircularProgressIndicator())
-              : Image.network(
-                  widget.videoUrl,
-                  height: 200,
-                  errorBuilder: (_, __, ___) => const Text('영상을 불러올 수 없습니다.'),
-                ),
+            mediaWidget,
             const SizedBox(height: 30),
             Text(
               widget.word,
