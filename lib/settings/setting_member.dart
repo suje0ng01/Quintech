@@ -1,114 +1,137 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../data/dummy_member.dart'; //TODO : 예시 사용자 정보 >> 추후 삭제
-// TODO: Firebase 연동 시 아래 import 주석 해제
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 
-//회원 정보 페이지
-class MemberInfoPage extends StatelessWidget {
+import '../constants/constants.dart';
+import '../state/login_state.dart';
+
+class MemberInfoPage extends StatefulWidget {
   const MemberInfoPage({super.key});
 
-  // 현재는 테스트용 더미 데이터를 사용하고 있음
-  // TODO: Firebase 연동 완료 후 false로 바꾸고 아래 _getUserInfo 함수 수정
-  final bool useDummyData = true;
+  @override
+  State<MemberInfoPage> createState() => _MemberInfoPageState();
+}
 
-  // 더미 or Firebase 에서 사용자 정보 가져오기
-  Future<DummyUser> _getUserInfo() async {
-    if (useDummyData) {
-      // 🔹 더미 데이터 반환
-      return DummyUser.example;
-    } else {
-      // 🔹 Firebase 연동 예시
-      // final user = FirebaseAuth.instance.currentUser;
-      // if (user != null) {
-      //   final doc = await FirebaseFirestore.instance
-      //       .collection('users')
-      //       .doc(user.uid)
-      //       .get();
-      //   final data = doc.data();
-      //   if (data != null) {
-      //     // API 명세 필드명에 맞춰서 fromApi 로 매핑
-      //     return DummyMember.fromApi(data);
-      //   }
-      // }
-      // 회원 정보 없으면 예외 처리
-      throw Exception('회원 정보가 없습니다.');
+class _MemberInfoPageState extends State<MemberInfoPage> {
+  final TextEditingController _nicknameController = TextEditingController();
+  bool _isLoading = true;
+  late LoginState _loginState;
+
+  @override
+  void initState() {
+    super.initState();
+    _loginState = Provider.of<LoginState>(context, listen: false);
+    _nicknameController.text = _loginState.nickname ?? '';
+    _isLoading = false;
+  }
+
+  Future<void> _saveNickname() async {
+    final newNickname = _nicknameController.text.trim();
+
+
+    print('현재 토큰: ${_loginState.token}');
+
+    try {
+      final response = await http.put(
+        Uri.parse('http://223.130.136.121:8082/api/user/update'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${_loginState.token}',
+        },
+        body: jsonEncode({
+          'nickname': newNickname,
+        }),
+      );
+
+      print('응답 코드: ${response.statusCode}');
+      print('응답 본문: ${response.body}');
+
+      if (response.statusCode == 200) {
+        _loginState.updateNickname(newNickname);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('닉네임이 수정되었습니다.')),
+        );
+        Navigator.pop(context);
+      } else {
+        final message = response.body.isNotEmpty
+            ? (jsonDecode(response.body)['message'] ?? '닉네임 수정 실패')
+            : '닉네임 수정 실패';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류 발생: $e')));
     }
+
   }
 
   @override
   Widget build(BuildContext context) {
+    final name = _loginState.name ?? '';
+    final email = _loginState.email ?? '';
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow[600],
-        title: const Text(
-          '회원정보',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
+        backgroundColor: AppColors.appbarcolor,
+        title: const Text('회원정보', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: FutureBuilder<DummyUser>(
-        future: _getUserInfo(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            final msg = snapshot.error.toString();
-            if (msg.contains('회원 정보가 없습니다')) {
-              return const Center(child: Text('회원 정보가 없습니다.'));
-            }
-            return const Center(child: Text('사용자 정보를 불러올 수 없습니다.'));
-          }
-          final user = snapshot.data!;
-
-          return Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildInfoRow('이름', user.name),
-                _buildInfoRow('닉네임', user.nickname),
-                _buildInfoRow('이메일', user.email),
-                const SizedBox(height: 30),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.yellow[600],
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 30, vertical: 12),
-                    ),
-                    child: const Text('확인'),
-                  ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('이름', name),
+            _buildNicknameField(),
+            _buildInfoRow('이메일', email),
+            const SizedBox(height: 30),
+            Center(
+              child: ElevatedButton(
+                onPressed: _saveNickname,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.yellow[600],
+                  foregroundColor: Colors.black,
                 ),
-              ],
+                child: const Text('저장'),
+              ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 
-  //회원 정보 한 줄을 표시하는 위젯
   Widget _buildInfoRow(String title, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+          SizedBox(width: 80, child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNicknameField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Row(
+        children: [
+          const SizedBox(width: 80, child: Text('닉네임', style: TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(
+            child: TextField(
+              controller: _nicknameController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              ),
             ),
           ),
-          Expanded(child: Text(value)),
         ],
       ),
     );

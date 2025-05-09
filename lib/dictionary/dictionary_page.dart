@@ -104,33 +104,15 @@ class _DictionaryPageState extends State<DictionaryPage> {
           centerTitle: true,
           title: const Text(
             '단어장',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black),
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsPage()),
-              );
+              Navigator.pop(context); // 현재 페이지 닫기
             },
           ),
-          actions: [
-            IconButton(
-              icon: isLoggedIn
-                  ? CircleAvatar(
-                      backgroundImage: NetworkImage(user.profileImageUrl),
-                    )
-                  : const Icon(Icons.account_circle, size: 30, color: Colors.black),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfilePage()),
-                );
-              },
-            ),
-            const SizedBox(width: 10),
-          ],
+
         ),
         body: SafeArea( // 🔐 SafeArea로 전체 감싸기 (디버그 레이아웃 방지)
           child: Column(
@@ -278,10 +260,7 @@ class _DictionaryPageState extends State<DictionaryPage> {
             icon: const Icon(Icons.home, size: 30),
             onPressed: () {
               FocusManager.instance.primaryFocus?.unfocus(); // 홈 이동 전 키보드 내리기
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => HomeScreen()),
-              );
+              Navigator.pop(context);
             },
           ),
         ),

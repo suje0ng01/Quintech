@@ -71,10 +71,10 @@ class NoticeDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.yellow[600],
+        backgroundColor: AppColors.appbarcolor,
         title: Text(
           notice['title']!,
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         leading: IconButton(

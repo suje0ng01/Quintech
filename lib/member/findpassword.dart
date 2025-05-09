@@ -1,8 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+
 import '../constants/constants.dart';
-import 'login.dart'; // 로그인 페이지 import
+import 'login.dart';
 
 class FindPasswordPage extends StatefulWidget {
   @override
@@ -11,80 +12,199 @@ class FindPasswordPage extends StatefulWidget {
 
 class _FindPasswordPageState extends State<FindPasswordPage> {
   final emailController = TextEditingController();
+  final codeController = TextEditingController();
+  final newPasswordController = TextEditingController();
   bool _isLoading = false;
 
-  // ✅ 비밀번호 재설정 메일 전송 함수
+  final http.Client _client = http.Client(); // 쿠키 기억용
+
+  // 이메일 전송
   Future<void> sendPasswordReset() async {
     final email = emailController.text.trim();
-
     if (email.isEmpty) {
-      _showSnackBar('이메일을 입력해주세요.');
+      _showMessage('이메일을 입력해주세요.');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
+      final uri = Uri.parse(
+          'http://223.130.136.121:8082/api/password/forgot?email=${Uri.encodeComponent(email)}');
 
-      if (snapshot.docs.isEmpty) {
-        _showSnackBar('해당 이메일로 가입된 계정이 없습니다.');
+      final response = await _client.post(uri);
+
+      print('📧 이메일 전송 요청: $uri');
+      print('응답 상태: ${response.statusCode}');
+      print('응답 내용: ${response.body}');
+
+      if (response.statusCode == 200) {
+        _showCodeInputDialog(email);
       } else {
-        await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-        _showSuccessDialog(); // 성공 시 팝업 띄우기
+        _showMessage('이메일 전송 실패');
       }
     } catch (e) {
-      _showSnackBar('오류가 발생했습니다. 다시 시도해주세요.');
+      _showMessage('오류 발생: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+  // 인증번호 확인
+  Future<void> _verifyCode(String email) async {
+    final code = codeController.text.trim();
+    if (code.isEmpty) {
+      _showMessage('인증번호를 입력해주세요.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final uri = Uri.parse(
+          'http://223.130.136.121:8082/api/password/verify?email=${Uri.encodeComponent(email)}&code=${Uri.encodeComponent(code)}');
+
+      final response = await _client.post(uri);
+
+      print('🔢 인증 확인 요청: $uri');
+      print('응답 상태: ${response.statusCode}');
+      print('응답 내용: ${response.body}');
+
+      if (response.statusCode == 200) {
+        Navigator.of(context).pop();
+        _showPasswordResetDialog(email);
+      } else {
+        _showMessage('인증 실패');
+      }
+    } catch (e) {
+      _showMessage('오류 발생: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // 비밀번호 재설정
+  Future<void> _resetPassword(String email) async {
+    final newPassword = newPasswordController.text.trim();
+    if (newPassword.length < 6) {
+      _showMessage('비밀번호는 6자 이상이어야 합니다.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final uri = Uri.parse(
+          'http://223.130.136.121:8082/api/password/reset?email=${Uri.encodeComponent(email)}');
+
+      final response = await _client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'newPassword': newPassword,
+          'confirmPassword': newPassword,
+        }),
+      );
+
+      print('🔐 Reset 요청: $uri');
+      print('응답 상태: ${response.statusCode}');
+      print('응답 내용: ${response.body}');
+
+      if (response.statusCode == 200) {
+        _showSuccessDialog();
+      } else {
+        _showMessage('비밀번호 변경 실패');
+      }
+    } catch (e) {
+      _showMessage('오류 발생: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // 팝업: 인증번호 입력
+  void _showCodeInputDialog(String email) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('인증번호 입력'),
+        content: TextField(
+          controller: codeController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(hintText: '인증번호'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => _verifyCode(email),
+            child: Text('확인'),
+          ),
+        ],
+      ),
     );
   }
 
-  // ✅ 비밀번호 재설정 성공시 보여줄 팝업
+  // 팝업: 비밀번호 입력
+  void _showPasswordResetDialog(String email) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('새 비밀번호 입력'),
+        content: TextField(
+          controller: newPasswordController,
+          obscureText: true,
+          decoration: InputDecoration(hintText: '새 비밀번호'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => _resetPassword(email),
+            child: Text('변경'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSuccessDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('비밀번호 재설정 메일 발송'),
-          content: Text('비밀번호 재설정 메일을 보냈습니다.\n메일함을 확인해주세요.'),
-          backgroundColor: Colors.white,
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // 팝업 닫기
-                Navigator.of(context).pop(); // FindPasswordPage 닫기
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                );
-              },
-              child: Text('확인'),
-            ),
-          ],
-        );
-      },
+      builder: (_) => AlertDialog(
+        title: Text('비밀번호 변경 완료'),
+        content: Text('비밀번호가 성공적으로 변경되었습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => LoginPage()),
+              );
+            },
+            child: Text('확인'),
+          ),
+        ],
+      ),
     );
+  }
+
+  void _showMessage(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   void dispose() {
+    _client.close();
     emailController.dispose();
+    codeController.dispose();
+    newPasswordController.dispose();
     super.dispose();
   }
 
@@ -95,97 +215,75 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '비밀번호 찾기',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
         ),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 50, left: 20, right: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 5,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('이메일', style: TextStyle(fontSize: 16)),
-                    const SizedBox(height: 5),
-                    TextField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: InputDecoration(
-                        hintText: '이메일 입력',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: const BorderSide(color: Colors.grey, width: 1),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(5),
-                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-                        ),
-                        focusedBorder: const OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5)),
-                          borderSide: BorderSide(color: Colors.black, width: 2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                        ),
-                        onPressed: _isLoading ? null : sendPasswordReset,
-                        child: _isLoading
-                            ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                            : const Text(
-                          '비밀번호 재설정',
-                          style: TextStyle(fontSize: 16, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+      body: Padding(
+        padding: const EdgeInsets.only(top: 50, left: 20, right: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, spreadRadius: 1)],
               ),
-            ],
-          ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('이메일', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 5),
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: '이메일 입력',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        borderSide: const BorderSide(color: Colors.grey, width: 1),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(5),
+                        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(5)),
+                        borderSide: BorderSide(color: Colors.black, width: 2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                      onPressed: _isLoading ? null : sendPasswordReset,
+                      child: _isLoading
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                          : const Text('비밀번호 재설정', style: TextStyle(fontSize: 16, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

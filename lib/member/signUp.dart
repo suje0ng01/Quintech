@@ -1,10 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:http/http.dart' as http;
 
 import '../constants/constants.dart';
-import 'login.dart'; // 기존 유지
+import 'login.dart';
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -16,9 +15,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
 
   bool _isLoading = false;
 
@@ -45,25 +41,33 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+      final response = await http.post(
+        Uri.parse('http://223.130.136.121:8082/api/user/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'nickname': name,
+        }),
       );
 
-      await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'name': name,
-        'email': email,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      print('응답 상태: ${response.statusCode}');
+      print('응답 내용: ${response.body}');
 
-      _showSuccessDialog();
-    } on FirebaseAuthException catch (e) {
-      _showMessage('회원가입 실패: ${e.code} - ${e.message}');
+      // ✅ 200 또는 201이면 성공 처리
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _showSuccessDialog();
+      } else {
+        String errorMessage = '회원가입 실패';
+        try {
+          final resBody = jsonDecode(response.body);
+          errorMessage = resBody['message'] ?? errorMessage;
+        } catch (_) {
+          // JSON 파싱 실패는 무시
+        }
+        _showMessage(errorMessage);
+      }
     } catch (e) {
       _showMessage('오류 발생: $e');
     } finally {
@@ -80,7 +84,7 @@ class _SignUpPageState extends State<SignUpPage> {
   void _showSuccessDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // 밖 터치해도 안닫힘
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
           title: Text('회원가입 완료'),
@@ -89,7 +93,7 @@ class _SignUpPageState extends State<SignUpPage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // 팝업 닫기
+                Navigator.of(context).pop();
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => LoginPage()),
@@ -145,7 +149,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     children: [
                       _buildTextField('이름', _nameController),
                       SizedBox(height: 15),
-                      _buildEmailField(),
+                      _buildTextField('이메일', _emailController),
                       SizedBox(height: 15),
                       _buildTextField('비밀번호', _passwordController, obscureText: true),
                       SizedBox(height: 15),
@@ -207,75 +211,4 @@ class _SignUpPageState extends State<SignUpPage> {
       ],
     );
   }
-
-  Widget _buildEmailField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('이메일', style: TextStyle(fontSize: 16)),
-        SizedBox(height: 5),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  hintText: '입력',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide(color: Colors.grey, width: 1),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade300,
-                      width: 1,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide(color: Colors.black, width: 2),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(width: 10),
-            ElevatedButton(
-              onPressed: () async {
-                final email = _emailController.text.trim();
-
-                if (email.isEmpty) {
-                  _showMessage('이메일을 입력해주세요.');
-                  return;
-                }
-
-                try {
-                  final querySnapshot = await _firestore
-                      .collection('users')
-                      .where('email', isEqualTo: email)
-                      .get();
-
-                  if (querySnapshot.docs.isNotEmpty) {
-                    _showMessage('이미 사용 중인 이메일입니다.');
-                  } else {
-                    _showMessage('사용 가능한 이메일입니다.');
-                  }
-                } catch (e) {
-                  _showMessage('오류 발생: $e');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade700,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(5),
-                ),
-              ),
-              child: Text('중복 확인'),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-  }
+}
