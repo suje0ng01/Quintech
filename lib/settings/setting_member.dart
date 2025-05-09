@@ -1,9 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 
 import '../constants/constants.dart';
+import '../state/login_state.dart';
 
 class MemberInfoPage extends StatefulWidget {
   const MemberInfoPage({super.key});
@@ -14,52 +15,66 @@ class MemberInfoPage extends StatefulWidget {
 
 class _MemberInfoPageState extends State<MemberInfoPage> {
   final TextEditingController _nicknameController = TextEditingController();
-  Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  late LoginState _loginState;
 
   @override
   void initState() {
     super.initState();
-    _loadUserInfo();
-  }
-
-  Future<void> _loadUserInfo() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final data = doc.data();
-      if (data != null) {
-        setState(() {
-          _userData = data;
-          _nicknameController.text = data['nickname'] ?? '';
-          _isLoading = false;
-        });
-      }
-    }
+    _loginState = Provider.of<LoginState>(context, listen: false);
+    _nicknameController.text = _loginState.nickname ?? '';
+    _isLoading = false;
   }
 
   Future<void> _saveNickname() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'nickname': _nicknameController.text.trim(),
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('닉네임이 수정되었습니다.')),
+    final newNickname = _nicknameController.text.trim();
+
+
+    print('현재 토큰: ${_loginState.token}');
+
+    try {
+      final response = await http.put(
+        Uri.parse('http://223.130.136.121:8082/api/user/update'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ${_loginState.token}',
+        },
+        body: jsonEncode({
+          'nickname': newNickname,
+        }),
       );
-      Navigator.pop(context);
+
+      print('응답 코드: ${response.statusCode}');
+      print('응답 본문: ${response.body}');
+
+      if (response.statusCode == 200) {
+        _loginState.updateNickname(newNickname);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('닉네임이 수정되었습니다.')),
+        );
+        Navigator.pop(context);
+      } else {
+        final message = response.body.isNotEmpty
+            ? (jsonDecode(response.body)['message'] ?? '닉네임 수정 실패')
+            : '닉네임 수정 실패';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류 발생: $e')));
     }
+
   }
 
   @override
   Widget build(BuildContext context) {
+    final name = _loginState.name ?? '';
+    final email = _loginState.email ?? '';
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.appbarcolor,
-        title: const Text(
-          '회원정보',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('회원정보', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: _isLoading
@@ -69,9 +84,9 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('이름', _userData?['name'] ?? ''),
+            _buildInfoRow('이름', name),
             _buildNicknameField(),
-            _buildInfoRow('이메일', _userData?['email'] ?? ''),
+            _buildInfoRow('이메일', email),
             const SizedBox(height: 30),
             Center(
               child: ElevatedButton(

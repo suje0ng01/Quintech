@@ -12,6 +12,8 @@ class LoginState with ChangeNotifier {
   String? get name => _prefs.getString('name');
   String? get email => _prefs.getString('email');
   String? get nickname => _prefs.getString('nickname');
+  String? get token => _prefs.getString('token');
+  int? get userId => _prefs.getInt('userId');
 
   LoginState() {
     _initPrefs();
@@ -43,8 +45,13 @@ class LoginState with ChangeNotifier {
   }
 
   Future<void> logOut() async {
-    await _prefs.clear(); // 모든 데이터 삭제
+    await _prefs.clear();
     _isLoggedIn = false;
+    notifyListeners();
+  }
+
+  Future<void> updateNickname(String newNickname) async {
+    await _prefs.setString('nickname', newNickname);
     notifyListeners();
   }
 }

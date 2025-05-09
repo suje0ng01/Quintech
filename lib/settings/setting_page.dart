@@ -45,7 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildListTile(
               '로그아웃',
               Icons.logout,
-              () {
+                  () {
                 final loginState = Provider.of<LoginState>(context, listen: false);
                 loginState.logOut();
               },
