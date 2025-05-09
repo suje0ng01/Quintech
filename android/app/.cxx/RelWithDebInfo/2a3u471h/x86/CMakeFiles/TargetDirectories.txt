@@ -1,0 +1,2 @@
+C:/Users/sunsu/Documents/ui_merge/android/app/.cxx/RelWithDebInfo/2a3u471h/x86/CMakeFiles/edit_cache.dir
+C:/Users/sunsu/Documents/ui_merge/android/app/.cxx/RelWithDebInfo/2a3u471h/x86/CMakeFiles/rebuild_cache.dir

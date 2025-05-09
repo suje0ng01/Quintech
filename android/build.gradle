@@ -1,13 +1,6 @@
 // 맨 위
 buildscript {
-    dependencies {
-        classpath 'com.google.gms:google-services:4.3.15' // ✅ 추가
-    }
-}
-
-
-buildscript {
-    ext.kotlin_version = '1.9.22' // ⭐️ 최신 버전으로 변경
+    ext.kotlin_version = '2.1.0' // ⭐️ 최신 버전으로 변경
     repositories {
         google()
         mavenCentral()
@@ -15,6 +8,7 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.android.tools.build:gradle:8.2.1'
+        classpath 'com.google.gms:google-services:4.3.15'
     }
 }
 

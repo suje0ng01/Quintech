@@ -1,5 +1,4 @@
 /// 더미 유저 데이터 모델
-/// 더미 유저 데이터 모델
 class DummyUser {
   final int id;
   final String name;
