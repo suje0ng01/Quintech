@@ -1,25 +1,27 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:quintech/member/reset_password_page.dart';
 
-import '../constants/constants.dart';
 import 'login.dart';
-import 'verify_code_page.dart'; // 새로 만든 페이지 임포트
 
-class FindPasswordPage extends StatefulWidget {
+class ResetPasswordPage extends StatefulWidget {
+  final String email;
+
+  const ResetPasswordPage({required this.email, super.key});
+
   @override
-  _FindPasswordPageState createState() => _FindPasswordPageState();
+  State<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
-class _FindPasswordPageState extends State<FindPasswordPage> {
-  final emailController = TextEditingController();
+class _ResetPasswordPageState extends State<ResetPasswordPage> {
+  final newPasswordController = TextEditingController();
   bool _isLoading = false;
-  final http.Client _client = http.Client();
 
-  Future<void> sendPasswordReset() async {
-    final email = emailController.text.trim();
-    if (email.isEmpty) {
-      _showMessage('이메일을 입력해주세요.');
+  Future<void> resetPassword() async {
+    final newPassword = newPasswordController.text.trim();
+
+    if (newPassword.length < 6) {
+      _showMessage('비밀번호는 6자 이상이어야 합니다.');
       return;
     }
 
@@ -27,33 +29,22 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
 
     try {
       final uri = Uri.parse(
-          'http://223.130.136.121:8082/api/password/forgot?email=${Uri.encodeComponent(email)}');
+        'http://223.130.136.121:8082/api/password/reset?email=${Uri.encodeComponent(widget.email)}',
+      );
 
-      final response = await _client.post(uri);
-
-      print('📧 이메일 전송 요청: $uri');
-      print('응답 상태: ${response.statusCode}');
-      print('응답 내용: ${response.body}');
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'newPassword': newPassword,
+          'confirmPassword': newPassword,
+        }),
+      );
 
       if (response.statusCode == 200) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => VerifyCodePage(
-              email: email,
-              onVerified: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ResetPasswordPage(email: email),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
+        _showSuccessDialog();
       } else {
-        _showMessage('이메일 전송 실패');
+        _showMessage('비밀번호 변경 실패');
       }
     } catch (e) {
       _showMessage('오류 발생: $e');
@@ -66,28 +57,40 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('성공'),
+        content: const Text('비밀번호가 성공적으로 변경되었습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => LoginPage()),
+                    (route) => false,
+              );
+            },
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
-    _client.close();
-    emailController.dispose();
+    newPasswordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.appbarcolor,
-        title: const Text(
-          '비밀번호 찾기',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      appBar: AppBar(title: const Text('새 비밀번호 설정'), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.only(top: 50, left: 20, right: 20),
         child: Column(
@@ -98,25 +101,27 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, spreadRadius: 1)],
+                boxShadow: const [
+                  BoxShadow(color: Colors.black12, blurRadius: 5, spreadRadius: 1),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('이메일', style: TextStyle(fontSize: 16)),
+                  const Text('새 비밀번호', style: TextStyle(fontSize: 16)),
                   const SizedBox(height: 5),
                   TextField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    controller: newPasswordController,
+                    obscureText: true,
                     decoration: InputDecoration(
-                      hintText: '이메일 입력',
+                      hintText: '새 비밀번호 입력',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(5),
-                        borderSide: const BorderSide(color: Colors.grey, width: 1),
+                        borderSide: const BorderSide(color: Colors.grey),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(5),
-                        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: const OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.circular(5)),
@@ -135,14 +140,14 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
                           borderRadius: BorderRadius.circular(5),
                         ),
                       ),
-                      onPressed: _isLoading ? null : sendPasswordReset,
+                      onPressed: _isLoading ? null : resetPassword,
                       child: _isLoading
                           ? const SizedBox(
                         height: 20,
                         width: 20,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                          : const Text('비밀번호 재설정', style: TextStyle(fontSize: 16, color: Colors.white)),
+                          : const Text('비밀번호 변경', style: TextStyle(fontSize: 16, color: Colors.white)),
                     ),
                   ),
                 ],
