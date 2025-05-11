@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'dictionary/korean_dictionary_webview.dart';
 import 'state/login_state.dart';
 import 'constants/constants.dart';
 import 'learning/learningpage.dart';
@@ -9,6 +9,7 @@ import 'settings/setting_page.dart';
 import 'dictionary/dictionary_page.dart';
 import 'member/login.dart';
 import 'member/profilepage.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -136,7 +137,14 @@ class CustomButton extends StatelessWidget {
               MaterialPageRoute(builder: (context) => DictionaryPage()),
             );
           } else if (text == '한국수어사전') {
-            // 추후 연결
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DictionaryWebViewPage(
+                  url: 'https://sldict.korean.go.kr/front/main/main.do',
+                ),
+              ),
+            );
           }
         },
         style: TextButton.styleFrom(foregroundColor: Colors.black),

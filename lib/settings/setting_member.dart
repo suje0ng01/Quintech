@@ -100,6 +100,7 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('정말 탈퇴하시겠습니까?'),
+        backgroundColor: Colors.white,
         content: const Text('회원 탈퇴 시 모든 정보가 삭제됩니다.'),
         actions: [
           TextButton(

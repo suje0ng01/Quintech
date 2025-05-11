@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:quintech/constants/constants.dart';
 import 'package:quintech/main.dart';
-import '../member/profilepage.dart';
 import '../member/login.dart';
 import '../state/login_state.dart'; // 로그인 상태
 import 'setting_info.dart';
 import 'setting_faq.dart';
 import 'setting_member.dart';
 import 'package:provider/provider.dart';
-import '../data/dummy_member.dart'; //TODO : 더미 회원정보 추후 삭제
 
 //설정 페이지
 class SettingsPage extends StatefulWidget {
@@ -22,7 +20,6 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = Provider.of<LoginState>(context).isLoggedIn;
-    final user = DummyUser.example; //더미 회원 정보
 
     return Scaffold(
       appBar: AppBar(
@@ -35,7 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: IconButton(
           icon: const Icon(Icons.home, color: Colors.black),
           onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
           },
         ),
       ),
