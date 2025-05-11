@@ -5,14 +5,28 @@ import '../constants/constants.dart';
 import '../state/login_state.dart';
 import '../settings/setting_member.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    // 페이지 진입 시 streak 불러오기
+    Future.microtask(() {
+      final loginState = Provider.of<LoginState>(context, listen: false);
+      loginState.fetchStreak(); // 수동으로 호출
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final loginState = Provider.of<LoginState>(context);
 
-    // ✅ 아직 초기화 안 됐으면 로딩
     if (!loginState.isInitialized) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -21,7 +35,7 @@ class ProfilePage extends StatelessWidget {
 
     final nickname = loginState.nickname ?? '닉네임 없음';
     final email = loginState.email ?? '이메일 없음';
-    final streak = 0; // 나중에 서버에서 받아오게 수정 가능
+    final streak = loginState.streak;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -75,7 +89,7 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 30),
             ProfileCard(
               icon: Icons.access_time,
-              title: '$streak일',
+              title: '${streak != null ? '$streak일' : '로딩 중...'}',
               subtitle: "학습 일수",
             ),
             const SizedBox(height: 15),
