@@ -1,0 +1,54 @@
+<!-- src/main/resources/templates/register.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>회원가입</title>
+    <meta charset="UTF-8">
+    <script>
+        function registerUser() {
+            let name = document.getElementById("name").value;
+            let email = document.getElementById("email").value;
+            let password = document.getElementById("password").value;
+            let nickname = document.getElementById("nickname").value;
+
+            if (!name || !email || !password || !nickname) {
+                alert("모든 필드를 입력하세요.");
+                return;
+            }
+
+            let user = { name, email, password, nickname };
+
+            fetch("/api/user/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(user)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert("회원가입 성공! 🎉");
+                    window.location.href = "/login";
+                })
+                .catch(error => {
+                    console.error("에러:", error);
+                    alert(error.message || "회원가입 중 오류가 발생했습니다.");
+                });
+        }
+    </script>
+
+</head>
+<body>
+<h2>회원가입</h2>
+<label>이름:</label> <input type="text" id="name"><br>
+<label>이메일:</label> <input type="email" id="email"><br>
+<label>닉네임:</label> <input type="text" id="nickname"><br> <!-- ✅ 닉네임 필드 추가 -->
+<label>비밀번호:</label> <input type="password" id="password"><br>
+<button onclick="registerUser()">회원가입</button>
+
+<p>이미 계정이 있으신가요? <a href="/login">로그인</a></p>
+</body>
+</html>
