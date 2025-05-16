@@ -5,6 +5,7 @@ import com.example.HandTalk.domain.User;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.dto.UserUpdateRequestDto;
+import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.service.CheckInService;
 import com.example.HandTalk.service.UserService;
 import io.jsonwebtoken.Claims;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = "*")  // 또는 특정 origin만 지정도 가능
@@ -23,12 +26,28 @@ public class UserController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final CheckInService checkInService;
-
+    private final UserRepository userRepository;
     // ✅ 회원가입 API
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequestDto userRequestDto) {
         UserResponseDto savedUser = userService.registerUser(userRequestDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+    }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmailDuplicate(@RequestParam("email") String email) {
+        boolean exists = userRepository.existsByEmail(email);
+        if (exists) {
+            return ResponseEntity.ok(Map.of(
+                    "available", false,
+                    "message", "이미 사용 중인 이메일입니다."
+            ));
+        } else {
+            return ResponseEntity.ok(Map.of(
+                    "available", true,
+                    "message", "사용 가능한 이메일입니다."
+            ));
+        }
     }
 
     @GetMapping("/check")

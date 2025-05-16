@@ -11,10 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/game")
-@CrossOrigin(origins = "*")  // 또는 특정 origin만 지정도 가능
+@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class GameController {
 
@@ -30,11 +31,11 @@ public class GameController {
     ) {
         String email = extractEmail(authHeader);
         if (email == null) {
-            return ResponseEntity.status(401).body("유효하지 않은 JWT입니다.");
+            return ResponseEntity.status(401).body(Map.of("message", "유효하지 않은 JWT입니다."));
         }
 
         gameLogService.saveGameResult(email, dto);
-        return ResponseEntity.ok("게임 결과가 저장되었습니다.");
+        return ResponseEntity.ok(Map.of("message", "게임 결과가 저장되었습니다."));
     }
 
     // ✅ 게임 문제 출제
@@ -42,11 +43,40 @@ public class GameController {
     public ResponseEntity<?> getGameQuestionList(@RequestHeader("Authorization") String authHeader) {
         String email = extractEmail(authHeader);
         if (email == null) {
-            return ResponseEntity.status(401).body("유효하지 않은 JWT입니다.");
+            return ResponseEntity.status(401).body(Map.of("message", "유효하지 않은 JWT입니다."));
         }
 
         List<GameQuestionDto> questions = gameQuestionService.generateGameQuestions(email);
-        return ResponseEntity.ok(questions);
+
+        if (questions.isEmpty()) {
+            return ResponseEntity.status(400).body(Map.of(
+                    "message", "연습을 완료한 항목이 없어 게임 문제를 생성할 수 없습니다."
+            ));
+        }
+
+        if (questions.size() < 20) {
+            return ResponseEntity.ok(Map.of(
+                    "message", "연습 완료 항목이 적어 20문제 미만이 출제되었습니다.",
+                    "questions", questions
+            ));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "message", "게임 문제가 정상 출제되었습니다.",
+                "questions", questions
+        ));
+    }
+
+    // ✅ 게임 통계 조회
+    @GetMapping("/stats")
+    public ResponseEntity<?> getGameStats(@RequestHeader("Authorization") String authHeader) {
+        String email = extractEmail(authHeader);
+        if (email == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "유효하지 않은 JWT입니다."));
+        }
+
+        GameStatsResponseDto stats = gameLogService.getGameStats(email);
+        return ResponseEntity.ok(stats);
     }
 
     // ✅ JWT에서 이메일 추출
@@ -59,15 +89,4 @@ public class GameController {
             return null;
         }
     }
-    @GetMapping("/stats")
-    public ResponseEntity<?> getGameStats(@RequestHeader("Authorization") String authHeader) {
-        String email = extractEmail(authHeader);
-        if (email == null) {
-            return ResponseEntity.status(401).body("유효하지 않은 JWT입니다.");
-        }
-
-        GameStatsResponseDto stats = gameLogService.getGameStats(email);
-        return ResponseEntity.ok(stats);
-    }
-
 }
