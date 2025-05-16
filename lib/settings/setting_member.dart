@@ -73,6 +73,9 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
 
       print('회원 탈퇴 응답: ${response.statusCode}');
 
+      if (!mounted) return; // ✅ 이 한 줄로 해결
+
+
       if (response.statusCode == 200) {
         await _loginState.logOut();
         ScaffoldMessenger.of(context).showSnackBar(
