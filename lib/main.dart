@@ -125,22 +125,53 @@ class CustomButton extends StatelessWidget {
       ),
       child: TextButton(
         onPressed: () {
+          final loginState = Provider.of<LoginState>(context, listen: false);
+
           if (text == '학습') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => LearningPage()),
             );
-          } else if (text == '게임') {
-            Navigator.push(
+          }
+
+          else if (text == '게임') {
+            if (!loginState.isLoggedIn) {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) => AlertDialog(
+                  backgroundColor: Colors.white,
+                  title: const Text('로그인이 필요한 서비스입니다'),
+                  content: const Text('로그인 후 이용해 주세요!'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context); // 팝업 닫기
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => LoginPage()),
+                        );
+                      },
+                      child: const Text('확인'),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => GameGuidePage()),
-            );
-          } else if (text == '단어장') {
+              );
+            }
+          }
+
+          else if (text == '단어장') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => DictionaryPage()),
             );
-          } else if (text == '한국수어사전') {
+          }
+
+          else if (text == '한국수어사전') {
             Navigator.push(
               context,
               MaterialPageRoute(
