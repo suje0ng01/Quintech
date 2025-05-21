@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../constants/constants.dart';
 import '../state/login_state.dart';
 import '../settings/setting_member.dart';
+import '../learning/learningpage.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -13,14 +17,54 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final storage = FlutterSecureStorage();
+  String? latestTopic;
+  String? latestType;
+
   @override
   void initState() {
     super.initState();
-    // 페이지 진입 시 streak 불러오기
-    Future.microtask(() {
+    Future.microtask(() async {
       final loginState = Provider.of<LoginState>(context, listen: false);
-      loginState.fetchStreak(); // 수동으로 호출
+      loginState.fetchStreak();
+
+      try {
+        await fetchLearningProgress();
+      } catch (e) {
+        print('⚠️ fetchLearningProgress 에러: $e');
+      }
     });
+  }
+
+  Future<void> fetchLearningProgress() async {
+    final token = await storage.read(key: 'jwt_token');  // 언더바!
+    print('🔑 JWT Token: $token');
+
+    if (token == null) {
+      print('❌ JWT 토큰 없음');
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse('http://223.130.136.121:8082/api/practice/progress'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    print('📡 응답 상태 코드: ${response.statusCode}');
+    print('📦 응답 본문: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        latestType = data['latestContentType'];
+        latestTopic = data['latestTopic'];
+      });
+    } else {
+      print('❌ API 호출 실패: ${response.statusCode}');
+    }
   }
 
   @override
@@ -36,21 +80,21 @@ class _ProfilePageState extends State<ProfilePage> {
     final nickname = loginState.nickname ?? '닉네임 없음';
     final email = loginState.email ?? '이메일 없음';
     final streak = loginState.streak;
+    final currentUnit = latestTopic != null
+        ? '$latestTopic'
+        : '최근 학습한 단원이 없습니다';
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: AppColors.appbarcolor,
-        title: const Text(
-          '프로필',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        title: const Text('프로필',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          icon: const Icon(Icons.arrow_back_ios_new_outlined,
+              color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
@@ -69,8 +113,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(nickname, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                      Text(email, style: const TextStyle(color: Colors.grey)),
+                      Text(nickname,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18)),
+                      Text(email,
+                          style: const TextStyle(color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -80,7 +127,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const MemberInfoPage()),
+                      MaterialPageRoute(
+                          builder: (context) => const MemberInfoPage()),
                     );
                   },
                 ),
@@ -96,10 +144,11 @@ class _ProfilePageState extends State<ProfilePage> {
             ProfileCard(
               icon: Icons.menu_book,
               title: "현재 학습 단원",
-              subtitle: "인사말과 기본 표현 (50%)",
+              subtitle: currentUnit,
               buttonText: "학습 바로 가기",
               onButtonPressed: () {
-                // TODO: 학습 페이지로 이동
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LearningPage()));
               },
             ),
             const SizedBox(height: 15),
@@ -145,7 +194,8 @@ class ProfileCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             title,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style:
+            const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -164,7 +214,8 @@ class ProfileCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: Text(buttonText!, style: const TextStyle(color: Colors.black)),
+              child: Text(buttonText!,
+                  style: const TextStyle(color: Colors.black)),
             ),
           ]
         ],
