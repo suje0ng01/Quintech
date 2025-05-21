@@ -42,11 +42,35 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildListTile(
               '로그아웃',
               Icons.logout,
-                  () {
-                final loginState = Provider.of<LoginState>(context, listen: false);
-                loginState.logOut();
+                  () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: Colors.white,
+                    title: const Text('로그아웃'),
+                    content: const Text('정말 로그아웃 하시겠습니까?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('취소'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('확인'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  final loginState = Provider.of<LoginState>(context, listen: false);
+                  loginState.logOut();
+                  Navigator.pop(context); // <-- 현재 페이지(SettingsPage) 닫고 홈으로 돌아감
+
+                }
               },
             ),
+
             _buildListTile('회원 정보', Icons.person, () {
               Navigator.push(
                 context,
@@ -55,6 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
             }),
           ] else ...[
             _buildListTile('로그인/회원가입', Icons.login, () {
+              Navigator.pop(context); // <-- 현재 페이지(SettingsPage) 닫고 홈으로 돌아감
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => LoginPage()),
