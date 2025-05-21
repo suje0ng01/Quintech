@@ -143,20 +143,48 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('학습 완료!'),
-        content: Text('정답 수: $correctCount/$totalCount\n결과를 저장할까요?'),
+        backgroundColor: Colors.white,
+        title: const Text(
+          '학습 완료',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '해당 챕터를 완료했어요!\n다음 챕터에 도전하세요',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '정답: $correctCount / $totalCount',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('닫기'),
-          ),
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
               await _savePracticeResult();
               if (mounted) Navigator.pop(context); // 이 페이지 닫기
             },
-            child: const Text('확인'),
+            child: const Text(
+              '다른 챕터 보기',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
