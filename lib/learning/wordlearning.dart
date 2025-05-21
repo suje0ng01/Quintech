@@ -191,6 +191,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     );
   }
 
+  String _getContentType(String category) {
+    if (category == "모음") return "VOWEL";
+    if (category == "자음") return "CONSONANT";
+    return "WORD"; // 나머지는 다 단어학습
+  }
+
   /// 학습 결과 서버에 저장
   Future<void> _savePracticeResult() async {
     final storage = FlutterSecureStorage();
@@ -204,7 +210,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     final now = DateTime.now().toIso8601String().substring(0, 19);
     final result = {
-      "contentType": "WORD",
+      "contentType": _getContentType(widget.category), // 동적으로!
       "topic": widget.category,
       "correctCount": correctCount,
       "totalCount": totalCount,
