@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dictionary/korean_dictionary_webview.dart';
+import 'game/gameguidepage.dart';
 import 'state/login_state.dart';
 import 'constants/constants.dart';
 import 'learning/learningpage.dart';
@@ -130,7 +131,10 @@ class CustomButton extends StatelessWidget {
               MaterialPageRoute(builder: (context) => LearningPage()),
             );
           } else if (text == '게임') {
-            // 추후 연결
+            Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => GameGuidePage()),
+            );
           } else if (text == '단어장') {
             Navigator.push(
               context,
