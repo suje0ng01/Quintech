@@ -2,6 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import '../constants/constants.dart';
 
 class LearningDetailPage extends StatefulWidget {
@@ -22,6 +26,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
+
+  int correctCount = 0; // →버튼 누를 때 카운트
+  int totalCount = 0;
 
   @override
   void initState() {
@@ -47,6 +54,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     setState(() {
       _letters = snapshot.docs;
+      totalCount = snapshot.docs.length;
       _isLoading = false;
     });
 
@@ -80,19 +88,15 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
-
-    // 전면 카메라 선택
     final frontCamera = _cameras?.firstWhere(
           (camera) => camera.lensDirection == CameraLensDirection.front,
       orElse: () => _cameras!.first,
     );
-
     _cameraController = CameraController(
       frontCamera!,
       ResolutionPreset.medium,
       enableAudio: false,
     );
-
     await _cameraController!.initialize();
     setState(() {
       _isCameraInitialized = true;
@@ -113,17 +117,103 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   }
 
   void _goToNext() async {
-    if (currentIndex < _letters.length - 1) {
+    // 마지막 단어면 팝업
+    if (currentIndex == _letters.length - 1) {
       setState(() {
-        currentIndex++;
-        _isLoading = true;
+        correctCount++; // 마지막 단어에서도 +1
       });
-      await _initializeVideoIfNeeded();
-      setState(() {
-        _isLoading = false;
-      });
+      _showCompleteDialog();
+      return;
+    }
+
+    // 중간 단계
+    setState(() {
+      currentIndex++;
+      correctCount++; // 다음 문제 이동할 때 +1
+      _isLoading = true;
+    });
+    await _initializeVideoIfNeeded();
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _showCompleteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('학습 완료!'),
+        content: Text('정답 수: $correctCount/$totalCount\n결과를 저장할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('닫기'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _savePracticeResult();
+              if (mounted) Navigator.pop(context); // 이 페이지 닫기
+            },
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 학습 결과 서버에 저장
+  Future<void> _savePracticeResult() async {
+    final storage = FlutterSecureStorage();
+    final jwt = await storage.read(key: 'jwt_token');
+    if (jwt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인 필요!')),
+      );
+      return;
+    }
+
+    final now = DateTime.now().toIso8601String().substring(0, 19);
+    final result = {
+      "contentType": "WORD",
+      "topic": widget.category,
+      "correctCount": correctCount,
+      "totalCount": totalCount,
+      "finishedAt": now,
+    };
+
+    // 👇 실제로 전송하는 데이터 콘솔에 출력
+    print('==== 서버에 보낼 데이터 ====');
+    print(jsonEncode(result));
+    print('=========================');
+
+    final response = await http.post(
+      Uri.parse('http://223.130.136.121:8082/api/practice/save'),
+      headers: {
+        'Authorization': 'Bearer $jwt',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(result),
+    );
+
+    // 👇 서버 응답도 콘솔에 출력
+    print('==== 서버 응답 ====');
+    print('statusCode: ${response.statusCode}');
+    print('body: ${response.body}');
+    print('=================');
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('학습 결과가 저장되었습니다!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('저장 실패: ${response.body}')),
+      );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +272,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ],
               ),
             ),
-
             Card(
               margin: const EdgeInsets.all(16),
               elevation: 4,
@@ -226,7 +315,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ),
               ),
             ),
-
             // 카메라 박스
             Container(
               width: 200,
@@ -258,7 +346,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
               )
                   : const Center(child: CircularProgressIndicator()),
             ),
-
             // 이동 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -276,6 +363,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            Text('정답 수: $correctCount / $totalCount'),
           ],
         ),
       ),
