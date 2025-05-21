@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'signUp.dart';
 import '../constants/constants.dart';
@@ -17,6 +18,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  final storage = FlutterSecureStorage(); // ✅ SecureStorage 추가
 
   void loginUser() async {
     showDialog(
@@ -36,12 +38,11 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop(); // 로딩 다이얼로그 닫기
+        Navigator.of(context, rootNavigator: true).pop();
       }
 
       if (response.statusCode == 200) {
         print("응답 내용: ${response.body}");
-
         final data = jsonDecode(response.body);
 
         final token = data['token'];
@@ -51,6 +52,8 @@ class _LoginPageState extends State<LoginPage> {
         final userId = data['id'];
 
         if (token != null && name != null && email != null && nickname != null && userId != null) {
+          await storage.write(key: 'jwt_token', value: token); // ✅ 토큰 저장
+
           await Provider.of<LoginState>(context, listen: false).logIn(
             token: token,
             userId: userId,
