@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/constants.dart';
+import 'gamedetailpage.dart'; // 실제 파일명에 맞게 import
 
 class GameGuidePage extends StatelessWidget {
   const GameGuidePage({Key? key}) : super(key: key);
@@ -28,7 +29,38 @@ class GameGuidePage extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: _buildGameInfoBox(),
+        child: Column(
+          children: [
+            _buildGameInfoBox(),
+            const SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.quiz, color: Colors.white),
+                label: const Text(
+                  '오늘의 퀴즈 풀기',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 4,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GameDetailPage(), // category 없이 이동
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
