@@ -82,21 +82,10 @@ class GameGuidePage extends StatelessWidget {
           Text('📌 게임 방식'),
           SizedBox(height: 4),
           Text('• 화면에 제시된 단어를 손으로 수어로 표현하세요.'),
-          Text('• 카메라가 사용자의 손 동작을 인식하여 정답 여부를 판단합니다.'),
+          Text('• 카메라가 사용자의 손 동작을 인식하여 \n   정답 여부를 판단합니다.'),
           Text('• 정확하게 수어를 표현하면 점수를 얻습니다.'),
-
-          SizedBox(height: 16),
-          Text('⏱️ 게임 흐름'),
           SizedBox(height: 4),
-          Text('1. 단어가 화면에 표시됩니다.'),
-          Text('2. 제한 시간 안에 수어를 손으로 표현합니다.'),
-          Text('3. 인식이 완료되면 다음 문제로 넘어갑니다.'),
-
-          SizedBox(height: 16),
-          Text('🎯 목표'),
-          SizedBox(height: 4),
-          Text('• 최대한 많은 단어를 정확하게 표현하세요.'),
-          Text('• 일정 점수를 넘기면 별 ⭐ 보상을 받을 수 있어요.'),
+          Text('• 정답률이 80% 이상이면 학습이 완료됩니다.', style: TextStyle(fontWeight: FontWeight.bold)),
 
           SizedBox(height: 16),
           Text('💡 팁'),
@@ -108,4 +97,5 @@ class GameGuidePage extends StatelessWidget {
       ),
     );
   }
+
 }

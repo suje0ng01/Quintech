@@ -102,7 +102,13 @@ class _GameDetailPageState extends State<GameDetailPage> {
   Future<void> _savePracticeResult() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
-    if (jwt == null) return;
+    if (jwt == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인 필요!')),
+      );
+      return;
+    }
 
     final now = DateTime.now().toIso8601String().substring(0, 19);
     final result = {
@@ -110,6 +116,13 @@ class _GameDetailPageState extends State<GameDetailPage> {
       "totalCount": _questions.length,
       "playedAt": now,
     };
+
+    // 👇 여기서부터 로그!
+    print('==== 서버에 보낼 데이터 ====');
+    print(jsonEncode(result));
+    print('==== 요청 URL ====');
+    print('http://223.130.136.121:8082/api/game/save');
+    print('=========================');
 
     final response = await http.post(
       Uri.parse('http://223.130.136.121:8082/api/game/save'),
@@ -120,7 +133,12 @@ class _GameDetailPageState extends State<GameDetailPage> {
       body: jsonEncode(result),
     );
 
-    if (!mounted) return; // <<== 추가
+    print('==== 서버 응답 ====');
+    print('statusCode: ${response.statusCode}');
+    print('body: ${response.body}');
+    print('=================');
+
+    if (!mounted) return;
 
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,6 +150,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
       );
     }
   }
+
 
   void _showCompleteDialog() {
     showDialog(
