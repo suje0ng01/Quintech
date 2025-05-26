@@ -303,6 +303,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                   ),
                   const SizedBox(height: 4),
                   Text('${currentIndex + 1}/${_letters.length}'),
+                  const SizedBox(height: 8),
+                  // ⭐ 정답 수를 여기로!
+                  Text('정답 수: $correctCount / $totalCount'),
                 ],
               ),
             ),
@@ -397,8 +400,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text('정답 수: $correctCount / $totalCount'),
           ],
         ),
       ),
