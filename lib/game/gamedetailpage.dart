@@ -259,6 +259,16 @@ class _GameDetailPageState extends State<GameDetailPage> {
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
                     child: Column(
                       children: [
+                        // 👇 정답 수를 가장 위로!
+                        Text(
+                          '정답 수: $correctCount / ${_questions.length}',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         const Text(
                           '아래 적힌 단어를 손으로 표현해보세요',
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
@@ -299,7 +309,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 36),
+
                 Center(
                   child: Container(
                     width: mainBoxSize,
