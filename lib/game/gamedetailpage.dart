@@ -220,7 +220,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '오늘의 퀴즈',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24),
         ),
         centerTitle: true,
         leading: IconButton(

@@ -26,7 +26,7 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '설정',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
         ),
         centerTitle: true,
         leading: IconButton(

@@ -80,7 +80,7 @@ class _FindPasswordPageState extends State<FindPasswordPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '비밀번호 찾기',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
         ),
         centerTitle: true,
         leading: IconButton(

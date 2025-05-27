@@ -278,6 +278,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.white,
+                fontSize: 24
             ),
           ),
           centerTitle: true,

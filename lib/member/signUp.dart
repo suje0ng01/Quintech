@@ -181,7 +181,7 @@ class _SignUpPageState extends State<SignUpPage> {
         backgroundColor: AppColors.appbarcolor,
         title: Text(
           '회원가입',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
         ),
         centerTitle: true,
       ),

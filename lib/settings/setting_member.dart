@@ -130,7 +130,7 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.appbarcolor,
-        title: const Text('회원정보', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('회원정보', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24)),
         centerTitle: true,
       ),
       body: _isLoading
@@ -151,7 +151,7 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _saveNickname,
+                      onPressed: _confirmSaveNickname,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.appbarcolor,
                         foregroundColor: Colors.black,
@@ -188,6 +188,31 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
       ),
     );
   }
+
+  void _confirmSaveNickname() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('닉네임 변경'),
+        content: const Text('닉네임을 변경하겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _saveNickname();
+            },
+            child: const Text('확인', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildNicknameField() {
     return Padding(
