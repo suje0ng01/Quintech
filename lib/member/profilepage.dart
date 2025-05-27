@@ -20,6 +20,8 @@ class _ProfilePageState extends State<ProfilePage> {
   final storage = FlutterSecureStorage();
   String? latestTopic;
   String? latestType;
+  double? myAccuracy;
+  double? globalAccuracy;
 
   @override
   void initState() {
@@ -30,14 +32,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
       try {
         await fetchLearningProgress();
+        await fetchGameStats();
       } catch (e) {
-        print('⚠️ fetchLearningProgress 에러: $e');
+        print('⚠️ 에러: $e');
       }
     });
   }
 
   Future<void> fetchLearningProgress() async {
-    final token = await storage.read(key: 'jwt_token');  // 언더바!
+    final token = await storage.read(key: 'jwt_token');
     print('🔑 JWT Token: $token');
 
     if (token == null) {
@@ -64,6 +67,30 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     } else {
       print('❌ API 호출 실패: ${response.statusCode}');
+    }
+  }
+
+  Future<void> fetchGameStats() async {
+    final token = await storage.read(key: 'jwt_token');
+    if (token == null) return;
+
+    final response = await http.get(
+      Uri.parse('http://223.130.136.121:8082/api/game/stats'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    print('게임 통계 응답: ${response.body}');
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        myAccuracy = (data['weeklyAverageAccuracy'] as num?)?.toDouble();
+        globalAccuracy = (data['globalWeeklyAverageAccuracy'] as num?)?.toDouble();
+
+      });
     }
   }
 
@@ -152,10 +179,12 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             ),
             const SizedBox(height: 15),
-            const ProfileCard(
+            ProfileCard(
               icon: Icons.sports_esports,
               title: "게임 정답률",
-              subtitle: "63.7%\n다른 사용자들의 평균 정답률 : 79%",
+              subtitle: myAccuracy != null && globalAccuracy != null
+                  ? "${myAccuracy!.toStringAsFixed(1)}%\n다른 사용자들의 평균 정답률 : ${globalAccuracy!.toStringAsFixed(1)}%"
+                  : "로딩 중...",
             ),
           ],
         ),
