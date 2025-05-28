@@ -83,55 +83,70 @@ Spring Boot 3 기반으로 구현되었으며, 이메일 인증, 회원가입, �
 
 ---
 
-1️⃣ Lazy Loading과 연관 엔티티 접근 시점 제어
-🔍 문제 상황
-수어 학습 결과, 게임 기록, 출석 등은 모두 User와 연관된 엔티티입니다. 연관 관계는 @ManyToOne(fetch = LAZY)로 설정되어 있어, 실제로 해당 연관 엔티티를 접근하는 시점에 쿼리가 발생합니다.
 
-java
-복사
-편집
-// ✅ CheckInService.java
+## ⚙️ 기술적 고민과 해결
+
+---
+
+### 1️⃣ Lazy Loading과 연관 엔티티 접근 시점 제어
+
+🧩 문제 상황  
+수어 학습 결과, 게임 기록, 출석 등은 모두 `User`와 연관된 엔티티입니다.  
+연관 관계는 `@ManyToOne(fetch = LAZY)`로 설정되어 있어, 실제 접근 시점에 쿼리가 발생합니다.
+
+```java
+// CheckInService.java
 CheckIn checkIn = new CheckIn();
-checkIn.setUser(user); // LAZY 설정이므로 이 시점엔 쿼리 없음
+checkIn.setUser(user);          // LAZY 설정 → 이 시점엔 쿼리 X
 checkInRepository.save(checkIn);
 
-// 이후 통계 API에서는 다음과 같이 사용
-List<CheckIn> checkIns = checkInRepository.findByUserOrderByCheckInDateDesc(user);
+// 통계 API 호출 시
+List<CheckIn> checkIns = 
+    checkInRepository.findByUserOrderByCheckInDateDesc(user);
+```
 ✅ 고민과 해결
 
-불필요한 쿼리 발생(N+1)을 방지하기 위해 @EntityGraph 또는 join fetch를 상황에 따라 고려
+불필요한 N+1 쿼리 발생 방지를 위해 @EntityGraph 또는 join fetch 적용 고려
 
-서비스 로직에서는 연관 객체 접근 시점을 명확히 인식하고 접근 타이밍을 설계
+연관 객체 접근 시점과 쿼리 발생 시점을 명확히 인식하고 설계
 
-2️⃣ 관심사 분리 (Separation of Concerns)
-🔍 적용 예시: 이메일 인증 및 비밀번호 재설정
 
-java
-복사
-편집
-// ✅ PasswordResetService.java
+###2️⃣ 관심사 분리 (Separation of Concerns)
+
+🧩 적용 예시: 이메일 인증 및 비밀번호 재설정
+
+```java
+// PasswordResetService.java
 String token = UUID.randomUUID().toString();
 emailService.sendEmail(email, subject, content);
+```
+
 ✅ 고민과 해결
 
-메일 전송 로직을 EmailService로 분리함으로써
+메일 전송 로직을 EmailService로 분리하여
 👉 기술 세부사항(이메일 구현)
 👉 비즈니스 로직(비밀번호 재설정)
 을 명확히 분리
 
-향후 Naver SMTP → SendGrid 등으로 전환 시에도 비즈니스 로직의 변경이 없음
+이후 Naver SMTP → SendGrid 등으로 전환되더라도 서비스 로직 변경 없음
 
-3️⃣ 통계 및 쿼리 응답 최적화
-🔍 문제 상황
-사용자의 학습 진도율과 가장 최근 학습 이력을 /api/practice/progress 한 API에서 함께 반환해야 했음.
 
-java
-복사
-편집
-// ✅ PracticeService.java
-practiceLogRepository.findTopByUserOrderByFinishedAtDesc(user); // 최근 학습 이력
-practiceLogRepository.countByContentTypeAndUser(...); // 통계 데이터
+###3️⃣ 통계 및 쿼리 응답 최적화
+🧩 문제 상황
+사용자의 학습 진도율과 최근 학습 이력을 /api/practice/progress 한 API에서 함께 반환해야 했음
+
+
+```java
+// PracticeService.java
+practiceLogRepository.findTopByUserOrderByFinishedAtDesc(user);  // 최근 학습 이력
+practiceLogRepository.countByContentTypeAndUser(...);             // 통계 데이터'
+```
+
 ✅ 고민과 해결
 
-복수의 쿼리로 데이터를 조회하되, 서비스 단에서 DTO로 통합 응답 구성
+복수 쿼리로 데이터를 나누어 조회한 뒤, DTO로 통합 응답
+
+복잡한 조건이 많아지면 QueryDSL 등으로 통합 쿼리 리팩토링 고려
+
+
 
