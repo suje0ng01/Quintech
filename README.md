@@ -55,11 +55,18 @@ Spring Boot 3 기반으로 구현되었으며, 이메일 인증, 회원가입, �
 
 ## 🗂️ 폴더 구조
 
-###📁 src/main/java/com/example/HandTalk
-###├── config # JWT, Security 등 설정
-###├── controller # REST API 엔드포인트
-###├── domain # JPA 엔티티 클래스
-###├── dto # 요청/응답 DTO
-###├── repository # JPA 인터페이스
-###├── service # 핵심 비즈니스 로직
-###├── util # 공통 유틸 (ex. JSON 로더 등)
+📁 src/main/java/com/example/HandTalk
+
+├── 📁 config # JWT, Security 등 설정
+
+├── 📁 controller # REST API 엔드포인트
+
+├── 📁 domain # JPA 엔티티 클래스
+
+├── 📁 dto # 요청/응답 DTO
+
+├── 📁 repository # JPA 인터페이스
+
+├── 📁 service # 핵심 비즈니스 로직
+
+└── 📁 util # 공통 유틸 (ex. JSON 로더 등)
