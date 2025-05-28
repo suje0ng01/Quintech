@@ -111,7 +111,7 @@ List<CheckIn> checkIns =
 연관 객체 접근 시점과 쿼리 발생 시점을 명확히 인식하고 설계
 
 
-###2️⃣ 관심사 분리 (Separation of Concerns)
+### 2️⃣ 관심사 분리 (Separation of Concerns)
 
 🧩 적용 예시: 이메일 인증 및 비밀번호 재설정
 
@@ -131,7 +131,7 @@ emailService.sendEmail(email, subject, content);
 이후 Naver SMTP → SendGrid 등으로 전환되더라도 서비스 로직 변경 없음
 
 
-###3️⃣ 통계 및 쿼리 응답 최적화
+### 3️⃣ 통계 및 쿼리 응답 최적화
 🧩 문제 상황
 사용자의 학습 진도율과 최근 학습 이력을 /api/practice/progress 한 API에서 함께 반환해야 했음
 
