@@ -128,7 +128,7 @@ emailService.sendEmail(email, subject, content);
 👉 비즈니스 로직(비밀번호 재설정)
 을 명확히 분리
 
-이후 Naver SMTP → SendGrid 등으로 전환되더라도 서비스 로직 변경 없음
+이후 Naver SMTP → 다른 메일 서비스 등으로 전환되더라도 서비스 로직 변경 없음
 
 
 ### 3️⃣ 통계 및 쿼리 응답 최적화
