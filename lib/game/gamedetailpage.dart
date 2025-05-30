@@ -539,31 +539,46 @@ class VideoPlayerWidget extends StatefulWidget {
 }
 
 class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(widget.url)
-      ..initialize().then((_) {
-        setState(() {
-          _initialized = true;
-        });
-        _controller.play();
-        _controller.setLooping(true);
-      });
+    _initController(widget.url);
+  }
+
+  @override
+  void didUpdateWidget(covariant VideoPlayerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _controller?.dispose();
+      _initController(widget.url);
+    }
+  }
+
+  void _initController(String url) async {
+    setState(() {
+      _initialized = false;
+    });
+    _controller = VideoPlayerController.network(url);
+    await _controller!.initialize();
+    setState(() {
+      _initialized = true;
+    });
+    _controller!.play();
+    _controller!.setLooping(true);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized) return const Center(child: CircularProgressIndicator());
-    return VideoPlayer(_controller);
+    if (!_initialized || _controller == null) return const Center(child: CircularProgressIndicator());
+    return VideoPlayer(_controller!);
   }
 }
