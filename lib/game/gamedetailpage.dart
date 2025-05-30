@@ -3,7 +3,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
+import 'package:video_player/video_player.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../constants/constants.dart';
 
 class GameDetailPage extends StatefulWidget {
@@ -23,10 +24,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
 
-  // 입력폼용 컨트롤러
   final TextEditingController _answerController = TextEditingController();
-
-  // 정답수 중복 방지용(문제별 정답 처리 여부)
   List<bool> _isAnswered = [];
 
   @override
@@ -43,6 +41,33 @@ class _GameDetailPageState extends State<GameDetailPage> {
     super.dispose();
   }
 
+  // 비디오인지 체크 (확장자 robust하게)
+  bool isVideoUrl(String? url) {
+    if (url == null) return false;
+    final lowerUrl = url.toLowerCase();
+    final path = lowerUrl.split('?').first; // ?파라미터 제거
+    return path.endsWith('.mp4') || path.endsWith('.mov');
+  }
+
+  // 🔹 Firestore에서 영상 URL 찾기
+  Future<String?> fetchSignVideoUrl(String category, String word) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('learningdata')
+          .doc('category')
+          .collection(category)
+          .doc(word)
+          .get();
+      if (snapshot.exists && snapshot.data() != null) {
+        return snapshot.data()!['imageUrl'] as String?;
+      }
+    } catch (e) {
+      print('파이어베이스 에러: $e');
+    }
+    return null;
+  }
+
+  // 🔹 서버 문제 받아오고 WORD에 영상 URL 붙이기 (병렬처리+데이터 프린트)
   Future<void> fetchQuestions() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
@@ -58,15 +83,32 @@ class _GameDetailPageState extends State<GameDetailPage> {
       },
     );
 
-    print('응답 코드: ${response.statusCode}');
-    print('응답 본문: ${response.body}');
-
     if (response.statusCode == 200) {
       final Map<String, dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
       final List<dynamic> questions = body['questions'];
+      print('서버에서 받아온 문제: $questions'); // ★ 어떤 문제 나오는지 콘솔 출력
+
+      List<Map<String, dynamic>> loaded = [];
+      List<Future<void>> futures = [];
+
+      for (final q in questions) {
+        final m = Map<String, dynamic>.from(q);
+        if (m['contentType'] == "WORD") {
+          final category = m['topic'] ?? '';
+          final word = m['question'] ?? '';
+          futures.add(
+              fetchSignVideoUrl(category, word).then((url) {
+                m['videoUrl'] = url;
+              })
+          );
+        }
+        loaded.add(m);
+      }
+      await Future.wait(futures); // 병렬 처리로 빠르게!
+
       setState(() {
-        _questions = List<Map<String, dynamic>>.from(questions);
-        _isAnswered = List<bool>.filled(_questions.length, false); // 문제별 정답 처리 여부
+        _questions = loaded;
+        _isAnswered = List<bool>.filled(_questions.length, false);
         _isLoading = false;
       });
     } else {
@@ -96,11 +138,12 @@ class _GameDetailPageState extends State<GameDetailPage> {
     });
   }
 
-  // 👉 카메라 문제에서 > 버튼
   void _goToNext() {
     if (!_isAnswered[currentIndex]) {
-      correctCount++;
-      _isAnswered[currentIndex] = true;
+      setState(() {
+        correctCount++;
+        _isAnswered[currentIndex] = true;
+      });
     }
 
     if (currentIndex == _questions.length - 1) {
@@ -114,7 +157,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
     }
   }
 
-  // 👉 WORD 문제에서 정답 확인 버튼
   void _checkWordAnswer() {
     final userInput = _answerController.text.trim();
     final correctAnswer = _questions[currentIndex]['question']?.trim();
@@ -152,7 +194,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
         ),
       );
     } else {
-      // 틀린 경우 팝업
+      // 틀린 경우
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -181,7 +223,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
     }
   }
 
-
   Future<void> _savePracticeResult() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
@@ -200,12 +241,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
       "playedAt": now,
     };
 
-    print('==== 서버에 보낼 데이터 ====');
-    print(jsonEncode(result));
-    print('==== 요청 URL ====');
-    print('http://223.130.136.121:8082/api/game/save');
-    print('=========================');
-
     final response = await http.post(
       Uri.parse('http://223.130.136.121:8082/api/game/save'),
       headers: {
@@ -214,11 +249,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
       },
       body: jsonEncode(result),
     );
-
-    print('==== 서버 응답 ====');
-    print('statusCode: ${response.statusCode}');
-    print('body: ${response.body}');
-    print('=================');
 
     if (!mounted) return;
 
@@ -296,10 +326,11 @@ class _GameDetailPageState extends State<GameDetailPage> {
     final Map<String, dynamic> q = _questions[currentIndex];
     final String contentType = q['contentType'] ?? '';
     final String question = q['question'] ?? '';
-    final String? imageUrl = q['imageUrl']; // WORD 타입일 때 사용될 수도 있음
-    final String? videoUrl = q['videoUrl']; // WORD 타입일 때 사용될 수도 있음
+    final String? videoUrl = q['videoUrl'];
 
-    final double mainBoxSize = MediaQuery.of(context).size.width * 0.8 > 400 ? 400 : MediaQuery.of(context).size.width * 0.8;
+    final double mainBoxSize = MediaQuery.of(context).size.width * 0.8 > 400
+        ? 400
+        : MediaQuery.of(context).size.width * 0.8;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -344,9 +375,8 @@ class _GameDetailPageState extends State<GameDetailPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              // 문제 유형별 분기
               if (contentType == "VOWEL" || contentType == "CONSONANT") ...[
-                // 기존 카메라 문제 UI
+                // 기존 카메라 문제
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
                   elevation: 4,
@@ -436,7 +466,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
                   ),
                 ),
               ] else if (contentType == "WORD") ...[
-                // 영상 or 이미지 + 입력폼 문제
+                // WORD 문제 (수어영상 or 이미지 + 입력폼)
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
                   elevation: 4,
@@ -452,11 +482,14 @@ class _GameDetailPageState extends State<GameDetailPage> {
                         ),
                         const SizedBox(height: 20),
                         Center(
-                          child: imageUrl != null && imageUrl.isNotEmpty
-                              ? Image.network(imageUrl, width: mainBoxSize, height: mainBoxSize * 0.7, fit: BoxFit.contain)
-                              : (videoUrl != null && videoUrl.isNotEmpty
-                              ? Text('비디오 지원 필요(추가 가능)')
-                              : const Text('미디어 없음')),
+                          child: (videoUrl != null && videoUrl.isNotEmpty)
+                              ? isVideoUrl(videoUrl)
+                              ? AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: VideoPlayerWidget(url: videoUrl),
+                          )
+                              : Image.network(videoUrl, width: mainBoxSize, height: mainBoxSize * 0.7, fit: BoxFit.contain)
+                              : const Text('미디어 없음'),
                         ),
                         const SizedBox(height: 20),
                         TextField(
@@ -494,5 +527,43 @@ class _GameDetailPageState extends State<GameDetailPage> {
         ),
       ),
     );
+  }
+}
+
+// 비디오 위젯 (video_player 패키지 필요)
+class VideoPlayerWidget extends StatefulWidget {
+  final String url;
+  const VideoPlayerWidget({required this.url, Key? key}) : super(key: key);
+  @override
+  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+  late VideoPlayerController _controller;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.url)
+      ..initialize().then((_) {
+        setState(() {
+          _initialized = true;
+        });
+        _controller.play();
+        _controller.setLooping(true);
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_initialized) return const Center(child: CircularProgressIndicator());
+    return VideoPlayer(_controller);
   }
 }
