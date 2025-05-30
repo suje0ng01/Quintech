@@ -126,7 +126,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
           _isAnswered[currentIndex] = true;
         });
       }
-      // 정답 맞추면 팝업!
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -137,7 +136,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
             TextButton(
               onPressed: () {
                 Navigator.of(ctx).pop();
-                // 마지막 문제면 결과 저장 & 완료 다이얼로그
                 if (currentIndex == _questions.length - 1) {
                   _savePracticeResult();
                   _showCompleteDialog();
@@ -148,17 +146,41 @@ class _GameDetailPageState extends State<GameDetailPage> {
                   });
                 }
               },
-              child: const Text('확인'),
+              child: const Text('다음 문제'),
             ),
           ],
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('틀렸습니다! 다시 입력해보세요.')),
+      // 틀린 경우 팝업
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('틀렸습니다', textAlign: TextAlign.center),
+          content: const Text('아쉽지만 다음 문제로 넘어갑니다.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                if (currentIndex == _questions.length - 1) {
+                  _savePracticeResult();
+                  _showCompleteDialog();
+                } else {
+                  setState(() {
+                    currentIndex++;
+                    _answerController.clear();
+                  });
+                }
+              },
+              child: const Text('다음 문제'),
+            ),
+          ],
+        ),
       );
     }
   }
+
 
   Future<void> _savePracticeResult() async {
     final storage = FlutterSecureStorage();
