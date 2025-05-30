@@ -23,11 +23,24 @@ class _GameDetailPageState extends State<GameDetailPage> {
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
 
+  // 입력폼용 컨트롤러
+  final TextEditingController _answerController = TextEditingController();
+
+  // 정답수 중복 방지용(문제별 정답 처리 여부)
+  List<bool> _isAnswered = [];
+
   @override
   void initState() {
     super.initState();
     fetchQuestions();
     _initCamera();
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    _answerController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchQuestions() async {
@@ -49,11 +62,11 @@ class _GameDetailPageState extends State<GameDetailPage> {
     print('응답 본문: ${response.body}');
 
     if (response.statusCode == 200) {
-      // *** 여기 수정! ***
       final Map<String, dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
       final List<dynamic> questions = body['questions'];
       setState(() {
         _questions = List<Map<String, dynamic>>.from(questions);
+        _isAnswered = List<bool>.filled(_questions.length, false); // 문제별 정답 처리 여부
         _isLoading = false;
       });
     } else {
@@ -65,7 +78,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
       );
     }
   }
-
 
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
@@ -84,10 +96,12 @@ class _GameDetailPageState extends State<GameDetailPage> {
     });
   }
 
+  // 👉 카메라 문제에서 > 버튼
   void _goToNext() {
-    setState(() {
+    if (!_isAnswered[currentIndex]) {
       correctCount++;
-    });
+      _isAnswered[currentIndex] = true;
+    }
 
     if (currentIndex == _questions.length - 1) {
       _savePracticeResult();
@@ -95,7 +109,54 @@ class _GameDetailPageState extends State<GameDetailPage> {
     } else {
       setState(() {
         currentIndex++;
+        _answerController.clear();
       });
+    }
+  }
+
+  // 👉 WORD 문제에서 정답 확인 버튼
+  void _checkWordAnswer() {
+    final userInput = _answerController.text.trim();
+    final correctAnswer = _questions[currentIndex]['question']?.trim();
+
+    if (userInput == correctAnswer) {
+      if (!_isAnswered[currentIndex]) {
+        setState(() {
+          correctCount++;
+          _isAnswered[currentIndex] = true;
+        });
+      }
+      // 정답 맞추면 팝업!
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('정답입니다!', textAlign: TextAlign.center),
+          content: const Text('잘했어요! 다음 문제로 넘어갑니다.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                // 마지막 문제면 결과 저장 & 완료 다이얼로그
+                if (currentIndex == _questions.length - 1) {
+                  _savePracticeResult();
+                  _showCompleteDialog();
+                } else {
+                  setState(() {
+                    currentIndex++;
+                    _answerController.clear();
+                  });
+                }
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('틀렸습니다! 다시 입력해보세요.')),
+      );
     }
   }
 
@@ -117,7 +178,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
       "playedAt": now,
     };
 
-    // 👇 여기서부터 로그!
     print('==== 서버에 보낼 데이터 ====');
     print(jsonEncode(result));
     print('==== 요청 URL ====');
@@ -150,7 +210,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
       );
     }
   }
-
 
   void _showCompleteDialog() {
     showDialog(
@@ -212,7 +271,13 @@ class _GameDetailPageState extends State<GameDetailPage> {
       );
     }
 
-    final String question = _questions[currentIndex]['question'] ?? '';
+    final Map<String, dynamic> q = _questions[currentIndex];
+    final String contentType = q['contentType'] ?? '';
+    final String question = q['question'] ?? '';
+    final String? imageUrl = q['imageUrl']; // WORD 타입일 때 사용될 수도 있음
+    final String? videoUrl = q['videoUrl']; // WORD 타입일 때 사용될 수도 있음
+
+    final double mainBoxSize = MediaQuery.of(context).size.width * 0.8 > 400 ? 400 : MediaQuery.of(context).size.width * 0.8;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -230,27 +295,36 @@ class _GameDetailPageState extends State<GameDetailPage> {
           },
         ),
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final double mainBoxSize = (constraints.maxWidth * 0.8).clamp(280.0, 400.0);
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-                  child: Column(
-                    children: [
-                      LinearProgressIndicator(
-                        value: (currentIndex + 1) / _questions.length,
-                        color: Colors.blue,
-                        backgroundColor: Colors.grey[300],
-                      ),
-                      const SizedBox(height: 4),
-                      Text('${currentIndex + 1}/${_questions.length}'),
-                    ],
-                  ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // 정답수 & 진행률
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+                child: Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: (currentIndex + 1) / _questions.length,
+                      color: Colors.blue,
+                      backgroundColor: Colors.grey[300],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('${currentIndex + 1}/${_questions.length}'),
+                    const SizedBox(height: 8),
+                    Text('정답 수: $correctCount / ${_questions.length}',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        )),
+                  ],
                 ),
-                const SizedBox(height: 18),
+              ),
+              const SizedBox(height: 8),
+              // 문제 유형별 분기
+              if (contentType == "VOWEL" || contentType == "CONSONANT") ...[
+                // 기존 카메라 문제 UI
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
                   elevation: 4,
@@ -259,16 +333,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
                     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
                     child: Column(
                       children: [
-                        // 👇 정답 수를 가장 위로!
-                        Text(
-                          '정답 수: $correctCount / ${_questions.length}',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
                         const Text(
                           '아래 적힌 단어를 손으로 표현해보세요',
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
@@ -309,7 +373,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
                     ),
                   ),
                 ),
-
+                const SizedBox(height: 36),
                 Center(
                   child: Container(
                     width: mainBoxSize,
@@ -340,16 +404,8 @@ class _GameDetailPageState extends State<GameDetailPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, size: 40),
-                        onPressed: () {
-                          setState(() {
-                            if (currentIndex > 0) currentIndex--;
-                          });
-                        },
-                      ),
                       IconButton(
                         icon: const Icon(Icons.arrow_forward, size: 40),
                         onPressed: _goToNext,
@@ -357,13 +413,63 @@ class _GameDetailPageState extends State<GameDetailPage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text('정답 수: $correctCount / ${_questions.length}'),
-                const SizedBox(height: 30),
-              ],
-            ),
-          );
-        },
+              ] else if (contentType == "WORD") ...[
+                // 영상 or 이미지 + 입력폼 문제
+                Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+                  elevation: 4,
+                  color: Colors.blueGrey[50],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+                    child: Column(
+                      children: [
+                        const Text(
+                          '수어 영상을 보고 단어를 입력하세요',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Center(
+                          child: imageUrl != null && imageUrl.isNotEmpty
+                              ? Image.network(imageUrl, width: mainBoxSize, height: mainBoxSize * 0.7, fit: BoxFit.contain)
+                              : (videoUrl != null && videoUrl.isNotEmpty
+                              ? Text('비디오 지원 필요(추가 가능)')
+                              : const Text('미디어 없음')),
+                        ),
+                        const SizedBox(height: 20),
+                        TextField(
+                          controller: _answerController,
+                          decoration: const InputDecoration(
+                            labelText: "정답을 입력하세요",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _checkWordAnswer,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text(
+                              "정답 확인",
+                              style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ]
+            ],
+          ),
+        ),
       ),
     );
   }
