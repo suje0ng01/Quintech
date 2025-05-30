@@ -27,8 +27,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
 
-  int correctCount = 0; // →버튼 누를 때 카운트
+  int correctCount = 0; // 정답 수
   int totalCount = 0;
+  List<bool> _isAnswered = []; // 각 문제별 정답 처리 여부
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       _letters = snapshot.docs;
       totalCount = snapshot.docs.length;
       _isLoading = false;
+      _isAnswered = List.filled(snapshot.docs.length, false); // 각 문제별로 false로 초기화
     });
 
     if (_letters.isNotEmpty) {
@@ -117,11 +119,16 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   }
 
   void _goToNext() async {
+    // 각 문제별로 정답 수를 단 1번만 증가
+    if (!_isAnswered[currentIndex]) {
+      setState(() {
+        correctCount++;
+        _isAnswered[currentIndex] = true;
+      });
+    }
+
     // 마지막 단어면 팝업
     if (currentIndex == _letters.length - 1) {
-      setState(() {
-        correctCount++; // 마지막 단어에서도 +1
-      });
       _showCompleteDialog();
       return;
     }
@@ -129,7 +136,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     // 중간 단계
     setState(() {
       currentIndex++;
-      correctCount++; // 다음 문제 이동할 때 +1
       _isLoading = true;
     });
     await _initializeVideoIfNeeded();
@@ -248,7 +254,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -276,8 +281,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           title: Text(
             widget.category,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
                 fontSize: 24
             ),
           ),
@@ -305,7 +310,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                   const SizedBox(height: 4),
                   Text('${currentIndex + 1}/${_letters.length}'),
                   const SizedBox(height: 8),
-                  // ⭐ 정답 수를 여기로!
+                  // 정답 수 출력
                   Text('정답 수: $correctCount / $totalCount'),
                 ],
               ),
