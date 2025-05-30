@@ -27,6 +27,9 @@ class _GameDetailPageState extends State<GameDetailPage> {
   final TextEditingController _answerController = TextEditingController();
   List<bool> _isAnswered = [];
 
+  // WORD 문제 영상 개별 로딩용
+  bool _isWordVideoLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +44,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
     super.dispose();
   }
 
-  // 비디오인지 체크 (확장자 robust하게)
+  // 비디오인지 체크
   bool isVideoUrl(String? url) {
     if (url == null) return false;
     final lowerUrl = url.toLowerCase();
@@ -67,7 +70,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
     return null;
   }
 
-  // 🔹 서버 문제 받아오고 WORD에 영상 URL 붙이기 (병렬처리+데이터 프린트)
+  // 🔹 서버 문제 받아오기만 (영상 X)
   Future<void> fetchQuestions() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
@@ -86,28 +89,10 @@ class _GameDetailPageState extends State<GameDetailPage> {
     if (response.statusCode == 200) {
       final Map<String, dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
       final List<dynamic> questions = body['questions'];
-      print('서버에서 받아온 문제: $questions'); // ★ 어떤 문제 나오는지 콘솔 출력
-
-      List<Map<String, dynamic>> loaded = [];
-      List<Future<void>> futures = [];
-
-      for (final q in questions) {
-        final m = Map<String, dynamic>.from(q);
-        if (m['contentType'] == "WORD") {
-          final category = m['topic'] ?? '';
-          final word = m['question'] ?? '';
-          futures.add(
-              fetchSignVideoUrl(category, word).then((url) {
-                m['videoUrl'] = url;
-              })
-          );
-        }
-        loaded.add(m);
-      }
-      await Future.wait(futures); // 병렬 처리로 빠르게!
+      print('서버에서 받아온 문제: $questions'); // 어떤 문제 나오는지 콘솔 출력
 
       setState(() {
-        _questions = loaded;
+        _questions = List<Map<String, dynamic>>.from(questions);
         _isAnswered = List<bool>.filled(_questions.length, false);
         _isLoading = false;
       });
@@ -153,6 +138,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
       setState(() {
         currentIndex++;
         _answerController.clear();
+        _isWordVideoLoading = false;
       });
     }
   }
@@ -185,6 +171,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
                   setState(() {
                     currentIndex++;
                     _answerController.clear();
+                    _isWordVideoLoading = false;
                   });
                 }
               },
@@ -212,6 +199,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
                   setState(() {
                     currentIndex++;
                     _answerController.clear();
+                    _isWordVideoLoading = false;
                   });
                 }
               },
@@ -312,8 +300,18 @@ class _GameDetailPageState extends State<GameDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      // “게임 문제 생성중...” 안내!
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text("게임 문제 생성중...", style: TextStyle(fontSize: 18, color: Colors.grey)),
+            ],
+          ),
+        ),
       );
     }
 
@@ -326,11 +324,54 @@ class _GameDetailPageState extends State<GameDetailPage> {
     final Map<String, dynamic> q = _questions[currentIndex];
     final String contentType = q['contentType'] ?? '';
     final String question = q['question'] ?? '';
-    final String? videoUrl = q['videoUrl'];
+    String? videoUrl = q['videoUrl'];
+    final String? category = q['topic'];
 
     final double mainBoxSize = MediaQuery.of(context).size.width * 0.8 > 400
         ? 400
         : MediaQuery.of(context).size.width * 0.8;
+
+    // WORD 문제면서 영상 URL이 아직 없으면 개별로딩
+    if (contentType == "WORD" && (videoUrl == null || videoUrl.isEmpty)) {
+      if (!_isWordVideoLoading) {
+        _isWordVideoLoading = true;
+        fetchSignVideoUrl(category ?? '', question).then((url) {
+          if (url != null && mounted) {
+            setState(() {
+              _questions[currentIndex]['videoUrl'] = url;
+              _isWordVideoLoading = false;
+            });
+          } else {
+            setState(() {
+              _isWordVideoLoading = false;
+            });
+          }
+        });
+      }
+      // WORD 문제 영상 로딩중 안내
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: AppColors.appbarcolor,
+          title: const Text('오늘의 퀴즈', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24)),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 18),
+              Text("수어 영상 불러오는 중...", style: TextStyle(fontSize: 16, color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -539,46 +580,31 @@ class VideoPlayerWidget extends StatefulWidget {
 }
 
 class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
-  VideoPlayerController? _controller;
+  late VideoPlayerController _controller;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initController(widget.url);
-  }
-
-  @override
-  void didUpdateWidget(covariant VideoPlayerWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
-      _controller?.dispose();
-      _initController(widget.url);
-    }
-  }
-
-  void _initController(String url) async {
-    setState(() {
-      _initialized = false;
-    });
-    _controller = VideoPlayerController.network(url);
-    await _controller!.initialize();
-    setState(() {
-      _initialized = true;
-    });
-    _controller!.play();
-    _controller!.setLooping(true);
+    _controller = VideoPlayerController.network(widget.url)
+      ..initialize().then((_) {
+        setState(() {
+          _initialized = true;
+        });
+        _controller.play();
+        _controller.setLooping(true);
+      });
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_initialized || _controller == null) return const Center(child: CircularProgressIndicator());
-    return VideoPlayer(_controller!);
+    if (!_initialized) return const Center(child: CircularProgressIndicator());
+    return VideoPlayer(_controller);
   }
 }
