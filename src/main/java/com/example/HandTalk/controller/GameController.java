@@ -3,7 +3,6 @@ package com.example.HandTalk.controller;
 import com.example.HandTalk.config.JwtUtil;
 import com.example.HandTalk.dto.GameLogRequestDto;
 import com.example.HandTalk.dto.GameQuestionDto;
-import com.example.HandTalk.dto.GameStatsResponseDto;
 import com.example.HandTalk.service.GameLogService;
 import com.example.HandTalk.service.GameQuestionService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+
+
 
 @RestController
 @RequestMapping("/api/game")
@@ -23,7 +24,6 @@ public class GameController {
     private final GameQuestionService gameQuestionService;
     private final JwtUtil jwtUtil;
 
-    // ✅ 게임 결과 저장
     @PostMapping("/save")
     public ResponseEntity<?> saveGameResult(
             @RequestHeader("Authorization") String authHeader,
@@ -38,7 +38,6 @@ public class GameController {
         return ResponseEntity.ok(Map.of("message", "게임 결과가 저장되었습니다."));
     }
 
-    // ✅ 게임 문제 출제
     @GetMapping("/questions")
     public ResponseEntity<?> getGameQuestionList(@RequestHeader("Authorization") String authHeader) {
         String email = extractEmail(authHeader);
@@ -67,7 +66,7 @@ public class GameController {
         ));
     }
 
-    // ✅ 게임 통계 조회
+    // ✅ GET /api/game/stats → Weekly 통계 제공
     @GetMapping("/stats")
     public ResponseEntity<?> getGameStats(@RequestHeader("Authorization") String authHeader) {
         String email = extractEmail(authHeader);
@@ -75,11 +74,9 @@ public class GameController {
             return ResponseEntity.status(401).body(Map.of("message", "유효하지 않은 JWT입니다."));
         }
 
-        GameStatsResponseDto stats = gameLogService.getGameStats(email);
-        return ResponseEntity.ok(stats);
+        return ResponseEntity.ok(gameLogService.getGameStats(email));
     }
 
-    // ✅ JWT에서 이메일 추출
     private String extractEmail(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
         String token = authHeader.substring(7);
