@@ -1,8 +1,8 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-
+import 'dictionary/korean_dictionary_webview.dart';
+import 'game/gameguidepage.dart';
 import 'state/login_state.dart';
 import 'constants/constants.dart';
 import 'learning/learningpage.dart';
@@ -10,16 +10,11 @@ import 'settings/setting_page.dart';
 import 'dictionary/dictionary_page.dart';
 import 'member/login.dart';
 import 'member/profilepage.dart';
-import 'dictionary/korean_dictionary_webview.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 🔐 Firebase 초기화
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp();
   runApp(
     MultiProvider(
       providers: [
@@ -34,7 +29,7 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) { 
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(scaffoldBackgroundColor: Colors.white),
@@ -130,19 +125,53 @@ class CustomButton extends StatelessWidget {
       ),
       child: TextButton(
         onPressed: () {
+          final loginState = Provider.of<LoginState>(context, listen: false);
+
           if (text == '학습') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => LearningPage()),
             );
-          } else if (text == '게임') {
-            // 추후 연결
-          } else if (text == '단어장') {
+          }
+
+          else if (text == '게임') {
+            if (!loginState.isLoggedIn) {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) => AlertDialog(
+                  backgroundColor: Colors.white,
+                  title: const Text('로그인이 필요한 서비스입니다'),
+                  content: const Text('로그인 후 이용해 주세요!'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context); // 팝업 닫기
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => LoginPage()),
+                        );
+                      },
+                      child: const Text('확인'),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => GameGuidePage()),
+              );
+            }
+          }
+
+          else if (text == '단어장') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => DictionaryPage()),
             );
-          } else if (text == '한국수어사전') {
+          }
+
+          else if (text == '한국수어사전') {
             Navigator.push(
               context,
               MaterialPageRoute(

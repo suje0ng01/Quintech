@@ -28,7 +28,7 @@ class FAQPage extends StatelessWidget {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           'FAQ',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -150,7 +150,7 @@ class InquiryPageState extends State<InquiryPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '문의하기',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
         ),
         centerTitle: true,
         leading: IconButton(

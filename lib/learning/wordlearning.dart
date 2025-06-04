@@ -1,7 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:image/image.dart' as img;
+
 import '../constants/constants.dart';
 
 class LearningDetailPage extends StatefulWidget {
@@ -22,6 +30,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
+
+  int correctCount = 0;
+  int totalCount = 0;
+  List<bool> _isAnswered = [];
+  String _resultText = '';
+  bool _isCapturingFrames = false;
 
   @override
   void initState() {
@@ -47,7 +61,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     setState(() {
       _letters = snapshot.docs;
+      totalCount = snapshot.docs.length;
       _isLoading = false;
+      _isAnswered = List.filled(snapshot.docs.length, false);
     });
 
     if (_letters.isNotEmpty) {
@@ -80,23 +96,127 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
-
-    // 전면 카메라 선택
     final frontCamera = _cameras?.firstWhere(
           (camera) => camera.lensDirection == CameraLensDirection.front,
       orElse: () => _cameras!.first,
     );
-
     _cameraController = CameraController(
       frontCamera!,
       ResolutionPreset.medium,
       enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.bgra8888,
     );
-
     await _cameraController!.initialize();
     setState(() {
       _isCameraInitialized = true;
     });
+  }
+
+  Future<Uint8List> _bgra8888ToJpeg(CameraImage image) async {
+    final plane = image.planes[0];
+    final bytes = plane.bytes;
+    final width = image.width;
+    final height = image.height;
+
+    final imageBuffer = img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: bytes.buffer,
+      order: img.ChannelOrder.bgra,
+    );
+    return Uint8List.fromList(img.encodeJpg(imageBuffer, quality: 70));
+  }
+
+  // 3초간 실시간 프레임 연속 캡처 & 서버로 한 번에 50장 전송
+  Future<void> _captureFramesAndSend() async {
+    if (!_isCameraInitialized || _cameraController == null) return;
+    if (_isCapturingFrames) return; // 중복 방지
+
+    setState(() { _resultText = '3초간 실시간 인식 중...'; });
+    List<Uint8List> frameList = [];
+    _isCapturingFrames = true;
+    int maxFrames = 60; // 3초 20fps
+    int frameCount = 0;
+    final Stopwatch sw = Stopwatch()..start();
+    Completer<void> done = Completer();
+
+    _cameraController!.startImageStream((CameraImage image) async {
+      if (!_isCapturingFrames) return;
+
+      try {
+        if (image.format.group == ImageFormatGroup.bgra8888) {
+          final jpgBytes = await _bgra8888ToJpeg(image);
+          frameList.add(jpgBytes);
+        }
+      } catch (e) {
+        print("프레임 변환 실패: $e");
+      }
+
+      frameCount++;
+      if (sw.elapsedMilliseconds > 3000 || frameCount >= maxFrames) {
+        _isCapturingFrames = false;
+        await _cameraController!.stopImageStream();
+        sw.stop();
+        done.complete();
+      }
+    });
+
+    await done.future;
+
+    setState(() { _resultText = '${frameList.length}장 캡처, 서버 전송 중...'; });
+
+    await _sendFramesToServerAllAtOnce(frameList);
+  }
+
+  // 이미지를 50장 한 번에 서버로 전송 (images[] multipart 필드)
+  Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
+    final url = 'https://85f0-2001-2d8-2009-3f17-4dd8-85d2-3e65-404b.ngrok-free.app/check-sign';
+    final uri = Uri.parse(url.trim());
+
+    final storage = FlutterSecureStorage();
+    final userId = await storage.read(key: 'user_id') ?? 'user123';
+
+    final doc = _letters[currentIndex];
+    final String step = doc['question'] ?? '기본';
+
+    var request = http.MultipartRequest('POST', uri);
+
+    // images key로 50장 한 번에 추가
+    for (int i = 0; i < frames.length; i++) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'images',  // 복수형 "images"!
+          frames[i],
+          filename: 'frame_$i.jpg',
+          contentType: MediaType('image', 'jpeg'),
+        ),
+      );
+    }
+    request.fields['user_id'] = userId;
+    request.fields['category'] = widget.category;
+    request.fields['step'] = step;
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('서버 응답: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _resultText = data['result'] ?? '인식 성공!';
+        });
+      } else {
+        setState(() {
+          _resultText = '서버 오류: ${response.body}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _resultText = '네트워크 오류: $e';
+      });
+    }
   }
 
   void _goToPrevious() async {
@@ -108,20 +228,138 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       await _initializeVideoIfNeeded();
       setState(() {
         _isLoading = false;
+        _resultText = '';
       });
     }
   }
 
   void _goToNext() async {
-    if (currentIndex < _letters.length - 1) {
+    if (!_isAnswered[currentIndex]) {
       setState(() {
-        currentIndex++;
-        _isLoading = true;
+        correctCount++;
+        _isAnswered[currentIndex] = true;
       });
-      await _initializeVideoIfNeeded();
-      setState(() {
-        _isLoading = false;
-      });
+    }
+    if (currentIndex == _letters.length - 1) {
+      _showCompleteDialog();
+      return;
+    }
+    setState(() {
+      currentIndex++;
+      _isLoading = true;
+      _resultText = '';
+    });
+    await _initializeVideoIfNeeded();
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _showCompleteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text(
+          '학습 완료',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '해당 챕터를 완료했어요!\n다음 챕터에 도전하세요',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '정답: $correctCount / $totalCount',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _savePracticeResult();
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text(
+              '다른 챕터 보기',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getContentType(String category) {
+    if (category == "모음") return "VOWEL";
+    if (category == "자음") return "CONSONANT";
+    return "WORD";
+  }
+
+  /// 학습 결과 서버에 저장
+  Future<void> _savePracticeResult() async {
+    final storage = FlutterSecureStorage();
+    final jwt = await storage.read(key: 'jwt_token');
+    if (jwt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인 필요!')),
+      );
+      return;
+    }
+
+    final now = DateTime.now().toIso8601String().substring(0, 19);
+    final result = {
+      "contentType": _getContentType(widget.category),
+      "topic": widget.category,
+      "correctCount": correctCount,
+      "totalCount": totalCount,
+      "finishedAt": now,
+    };
+
+    print('==== 서버에 보낼 데이터 ====');
+    print(jsonEncode(result));
+    print('=========================');
+
+    final response = await http.post(
+      Uri.parse('http://223.130.136.121:8082/api/practice/save'),
+      headers: {
+        'Authorization': 'Bearer $jwt',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(result),
+    );
+
+    print('==== 서버 응답 ====');
+    print('statusCode: ${response.statusCode}');
+    print('body: ${response.body}');
+    print('=================');
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('학습 결과가 저장되었습니다!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('저장 실패: ${response.body}')),
+      );
     }
   }
 
@@ -152,8 +390,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           title: Text(
             widget.category,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontSize: 24
             ),
           ),
           centerTitle: true,
@@ -179,10 +418,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                   ),
                   const SizedBox(height: 4),
                   Text('${currentIndex + 1}/${_letters.length}'),
+                  const SizedBox(height: 8),
+                  Text('정답 수: $correctCount / $totalCount'),
                 ],
               ),
             ),
-
             Card(
               margin: const EdgeInsets.all(16),
               elevation: 4,
@@ -226,12 +466,35 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ),
               ),
             ),
-
-            // 카메라 박스
+            // 3초 연속 촬영(실시간 프레임 전송) 버튼
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: SizedBox(
+                width: 220,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _isCameraInitialized && !_isCapturingFrames
+                      ? _captureFramesAndSend
+                      : null,
+                  icon: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 24),
+                  label: const Text('수어 인식 3초 연속', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+            ),
+            if (_resultText.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(_resultText, style: const TextStyle(fontSize: 18, color: Colors.blue)),
+              ),
+            // 카메라 프리뷰
             Container(
               width: 200,
               height: 200,
-              margin: const EdgeInsets.symmetric(vertical: 16),
+              margin: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.black),
                 borderRadius: BorderRadius.circular(10),
@@ -241,25 +504,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 borderRadius: BorderRadius.circular(10),
                 child: AspectRatio(
                   aspectRatio: _cameraController!.value.aspectRatio,
-                  child: ClipRect(
-                    child: OverflowBox(
-                      alignment: Alignment.center,
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _cameraController!.value.previewSize!.height,
-                          height: _cameraController!.value.previewSize!.width,
-                          child: CameraPreview(_cameraController!),
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: CameraPreview(_cameraController!),
                 ),
               )
                   : const Center(child: CircularProgressIndicator()),
             ),
-
-            // 이동 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Row(

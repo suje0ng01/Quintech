@@ -105,7 +105,7 @@ class _DictionaryPageState extends State<DictionaryPage> {
           centerTitle: true,
           title: const Text(
             '단어장',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold,fontSize: 24),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),

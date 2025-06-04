@@ -17,6 +17,10 @@ class _SignUpPageState extends State<SignUpPage> {
   final _confirmPasswordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _emailChecked = false;
+
+  String? _emailCheckMessage;
+  Color _emailCheckColor = Colors.grey;
 
   void _signUp() async {
     if (_isLoading) return;
@@ -36,9 +40,12 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    if (!_emailChecked || _emailCheckColor == Colors.red) {
+      _showMessage('중복된 이메일입니다. 다른 이메일로 가입해주세요');
+      return;
+    }
+
+    setState(() => _isLoading = true);
 
     try {
       final response = await http.post(
@@ -55,25 +62,76 @@ class _SignUpPageState extends State<SignUpPage> {
       print('응답 상태: ${response.statusCode}');
       print('응답 내용: ${response.body}');
 
-      // ✅ 200 또는 201이면 성공 처리
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showSuccessDialog();
       } else {
         String errorMessage = '회원가입 실패';
         try {
-          final resBody = jsonDecode(response.body);
-          errorMessage = resBody['message'] ?? errorMessage;
-        } catch (_) {
-          // JSON 파싱 실패는 무시
-        }
+          if (response.body.isNotEmpty) {
+            final resBody = jsonDecode(response.body);
+            errorMessage = resBody['message'] ?? errorMessage;
+          }
+        } catch (_) {}
         _showMessage(errorMessage);
       }
     } catch (e) {
       _showMessage('오류 발생: $e');
     } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _checkEmailDuplicate() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      _showMessage('이메일을 입력해주세요.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _emailChecked = false;
+    });
+
+    try {
+      final uri = Uri.parse('http://223.130.136.121:8082/api/user/check-email?email=$email');
+      final response = await http.get(uri);
+
+      print('응답 상태: ${response.statusCode}');
+      print('응답 내용: ${response.body}');
+
+      if (response.body.isEmpty) {
+        setState(() {
+          _emailCheckMessage = '서버 응답이 없습니다.';
+          _emailCheckColor = Colors.red;
+        });
+        return;
+      }
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['available'] == true) {
+        setState(() {
+          _emailCheckMessage = data['message'] ?? '사용 가능한 이메일입니다.';
+          _emailCheckColor = Colors.green;
+          _emailChecked = true;
+        });
+      } else {
+        setState(() {
+          _emailCheckMessage = data['message'] ?? '이미 사용 중인 이메일입니다.';
+          _emailCheckColor = Colors.red;
+          _emailChecked = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _isLoading = false;
+        _emailCheckMessage = '오류 발생: $e';
+        _emailCheckColor = Colors.red;
+        _emailChecked = false;
       });
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -123,11 +181,7 @@ class _SignUpPageState extends State<SignUpPage> {
         backgroundColor: AppColors.appbarcolor,
         title: Text(
           '회원가입',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
         ),
         centerTitle: true,
       ),
@@ -149,7 +203,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     children: [
                       _buildTextField('이름', _nameController),
                       SizedBox(height: 15),
-                      _buildTextField('이메일', _emailController),
+                      _buildTextField('이메일', _emailController, isEmail: true),
                       SizedBox(height: 15),
                       _buildTextField('비밀번호', _passwordController, obscureText: true),
                       SizedBox(height: 15),
@@ -183,31 +237,68 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool obscureText = false}) {
+  Widget _buildTextField(String label, TextEditingController controller,
+      {bool obscureText = false, bool isEmail = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: TextStyle(fontSize: 16)),
         SizedBox(height: 5),
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          decoration: InputDecoration(
-            hintText: '입력',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
-              borderSide: BorderSide(color: Colors.grey, width: 1),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                obscureText: obscureText,
+                decoration: InputDecoration(
+                  hintText: '입력',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: BorderSide(color: Colors.grey, width: 1),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(5),
+                    borderSide: BorderSide(color: Colors.black, width: 2),
+                  ),
+                ),
+                onChanged: isEmail
+                    ? (_) {
+                  setState(() {
+                    _emailChecked = false;
+                    _emailCheckMessage = null;
+                    _emailCheckColor = Colors.grey;
+                  });
+                }
+                    : null,
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
-              borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
-              borderSide: BorderSide(color: Colors.black, width: 2),
+            if (isEmail) SizedBox(width: 10),
+            if (isEmail)
+              ElevatedButton(
+                onPressed: _isLoading ? null : _checkEmailDuplicate,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                child: Text('중복 확인'),
+              ),
+          ],
+        ),
+        if (isEmail && _emailCheckMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _emailCheckMessage!,
+              style: TextStyle(color: _emailCheckColor),
             ),
           ),
-        ),
       ],
     );
   }

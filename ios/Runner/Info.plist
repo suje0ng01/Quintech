@@ -31,9 +31,13 @@
     <key>NSAllowsArbitraryLoads</key>
     <true/>
   </dict>
+  <key>io.flutter.embedded_views_preview</key>
+  <true/>
+
   <key>NSCameraUsageDescription</key>
   <string>앱에서 카메라를 사용합니다.</string>
   <key>NSDocumentsFolderUsageDescription</key>
+
   <string>파일 접근을 위해 필요합니다.</string>
   <key>NSMicrophoneUsageDescription</key>
   <string>마이크 사용을 위해 접근이 필요합니다.</string>

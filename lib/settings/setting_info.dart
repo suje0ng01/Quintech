@@ -27,7 +27,7 @@ class NoticePage extends StatelessWidget {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '공지사항',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold,fontSize: 24),
         ),
         centerTitle: true,
         leading: IconButton(
