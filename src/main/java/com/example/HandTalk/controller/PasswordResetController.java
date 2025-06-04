@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/password")
+@CrossOrigin(origins = "*")  // 또는 특정 origin만 지정도 가능
 @RequiredArgsConstructor
 public class PasswordResetController {
 

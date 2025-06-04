@@ -6,11 +6,13 @@ import com.example.HandTalk.repository.UserRepository;
 import com.example.HandTalk.domain.User;
 import com.example.HandTalk.config.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -21,20 +23,25 @@ public class OAuthService {
     private final JwtUtil jwtUtil;
 
     public LoginResponseDto login(LoginRequestDto requestDto) {
-        // Spring Security 인증 (ID & PW 체크)
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword())
-        );
+        // ✅ 1. 이메일 직접 먼저 확인
+        User user = userRepository.findByEmail(requestDto.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "존재하지 않는 이메일입니다."));
 
-        // 사용자 정보 가져오기
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        User user = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        try {
+            // ✅ 2. 비밀번호 인증만 수행
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            requestDto.getEmail(),
+                            requestDto.getPassword()
+                    )
+            );
 
-        // ✅ JWT 생성 (email & role 포함)
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+            // ✅ 3. JWT 생성
+            String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+            return new LoginResponseDto(user, token);
 
-        // ✅ JWT 포함한 UserResponseDto 반환
-        return new LoginResponseDto(user,token);
+        } catch (BadCredentialsException e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "비밀번호가 틀렸습니다.");
+        }
     }
 }

@@ -1,9 +1,12 @@
 package com.example.HandTalk.controller;
 
 import com.example.HandTalk.config.JwtUtil;
+import com.example.HandTalk.domain.User;
 import com.example.HandTalk.dto.UserRequestDto;
 import com.example.HandTalk.dto.UserResponseDto;
 import com.example.HandTalk.dto.UserUpdateRequestDto;
+import com.example.HandTalk.repository.UserRepository;
+import com.example.HandTalk.service.CheckInService;
 import com.example.HandTalk.service.UserService;
 import io.jsonwebtoken.Claims;
 import jakarta.validation.Valid;
@@ -12,14 +15,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
+@CrossOrigin(origins = "*")  // 또는 특정 origin만 지정도 가능
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
-
+    private final CheckInService checkInService;
+    private final UserRepository userRepository;
     // ✅ 회원가입 API
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserRequestDto userRequestDto) {
@@ -27,7 +34,22 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
 
-    // ✅ 사용자 정보 + 출석일수 조회 API (통합)
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmailDuplicate(@RequestParam("email") String email) {
+        boolean exists = userRepository.existsByEmail(email);
+        if (exists) {
+            return ResponseEntity.ok(Map.of(
+                    "available", false,
+                    "message", "이미 사용 중인 이메일입니다."
+            ));
+        } else {
+            return ResponseEntity.ok(Map.of(
+                    "available", true,
+                    "message", "사용 가능한 이메일입니다."
+            ));
+        }
+    }
+
     @GetMapping("/check")
     public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -38,10 +60,17 @@ public class UserController {
         Claims claims = jwtUtil.parseToken(token);
         String email = claims.getSubject(); // JWT에서 email 추출
 
-        // 사용자 정보 + streak 통합 조회
+        // 🔽 ✅ 사용자 엔티티 조회
+        User user = userService.getUserEntityByEmail(email);
+
+        // 🔽 ✅ 출석 기록 자동 저장
+        checkInService.checkIn(user);
+
+        // 🔽 ✅ 사용자 정보 + streak 계산
         UserResponseDto userResponse = userService.getUserByEmail(email);
         return ResponseEntity.ok(userResponse);
     }
+
 
     // ✅ 사용자 닉네임 수정
     @PutMapping("/update")

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -31,6 +33,11 @@ public class GameLog {
     // 정확도 (%)
     @Column(nullable = false)
     private double accuracy;
+
+
+    @OneToMany(mappedBy = "gameLog", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GameProblem> problems = new ArrayList<>();
+
 
     // 플레이 시간
     private LocalDateTime playedAt;

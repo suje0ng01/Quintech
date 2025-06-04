@@ -13,9 +13,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/auth")
+@CrossOrigin(origins = "*")  // 또는 특정 origin만 지정도 가능
 @RequiredArgsConstructor
 public class AuthController {
     private final OAuthService authService;
@@ -23,18 +25,19 @@ public class AuthController {
     private final UserRepository userRepository;
     private final CheckInService checkInService;
 
-    // ✅ 로그인하는 api(jwt반환)
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto requestDto) {
         LoginResponseDto response = authService.login(requestDto);
 
-        // ✅ 자동 출석 체크
+        // ✅ DTO에는 사용자 식별 ID(email) 포함돼 있으므로 다시 user 조회
         User user = userRepository.findByEmail(response.getEmail())
-                .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다."));
-        checkInService.checkIn(user);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "사용자 조회 실패"));
+
+        checkInService.checkIn(user); // 출석 체크
 
         return ResponseEntity.ok(response);
     }
+
 
     // ✅ 구글 로그인 후 jwt반환 api
     @GetMapping("/oauth/google/info")

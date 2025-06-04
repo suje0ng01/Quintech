@@ -16,9 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/practice")
+@CrossOrigin(origins = "*")  // 또는 특정 origin만 지정도 가능
 @RequiredArgsConstructor
 public class PracticeController {
 
@@ -39,7 +41,7 @@ public class PracticeController {
         }
 
         practiceService.savePractice(email, requestDto);
-        return ResponseEntity.ok("학습 결과가 저장되었습니다.");
+        return ResponseEntity.ok(Map.of("message", "학습 결과가 저장되었습니다."));
     }
 
     // ✅ 진도율(자음/모음/단어) 조회
@@ -74,17 +76,32 @@ public class PracticeController {
         topic = topic.trim();
         wordTopicLoader.ensureInitialized();
 
+        // ❌ 존재하지 않는 topic
         if (!wordTopicLoader.getTopicToWords().containsKey(topic)) {
-            return ResponseEntity.badRequest().body("❌ 존재하지 않는 topic입니다: " + topic);
+            return ResponseEntity.badRequest().body(
+                    Map.of("message", "존재하지 않는 topic입니다: " + topic)
+            );
         }
 
+        // ✅ 단어 문제 추출
         List<PracticeQuestionDto> questions = practiceQuestionService.getWordQuestions(topic);
+
+        // ❌ 토픽은 있지만 단어가 없는 경우
         if (questions.isEmpty()) {
-            return ResponseEntity.status(404).body("⚠️ 해당 토픽에 등록된 단어 비디오가 없습니다.");
+            return ResponseEntity.status(404).body(
+                    Map.of("message", "해당 토픽에 등록된 단어가 없습니다.")
+            );
         }
 
-        return ResponseEntity.ok(questions);
+        // ✅ 정상 반환
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "단어 문제가 정상 출제되었습니다.",
+                        "questions", questions
+                )
+        );
     }
+
 
 
     // ✅ JWT에서 이메일 안전하게 추출
@@ -98,7 +115,7 @@ public class PracticeController {
             Claims claims = jwtUtil.parseToken(token);
             return claims.getSubject();
         } catch (ExpiredJwtException | MalformedJwtException | SignatureException e) {
-            System.err.println("❌ JWT 파싱 실패: " + e.getMessage());
+            System.err.println(" JWT 파싱 실패: " + e.getMessage());
             return null;
         }
     }
