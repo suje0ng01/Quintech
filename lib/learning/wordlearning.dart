@@ -53,13 +53,14 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   int totalCount = 0;
   List<bool> _isAnswered = [];
 
-  // “수어 인식 3초 연속” 버튼 상태 관리용
+  // “수어 인식” 버튼 상태 관리용
   bool _isCapturingFrames = false;
   bool _hasSentFrames = false;
-  int _countdown = 0; // 카운트다운 타이머 값
+  int _countdown = 0; // (카운트다운은 동적 모드 전용)
 
   static const int MIN_FRAMES = 10; // 동적 처리 시 최소 필요 프레임 수
-  static const int MAX_FRAMES = 60; // 3초간 대략 수집할 최대 프레임 수
+  static const int MAX_FRAMES = 60; // 동적 모드에서 3초간 수집 가능한 최대
+  static const int STATIC_MAX = 5;  // 정적 모드(자음/모음)에서 수집할 이미지 수
 
   @override
   void initState() {
@@ -155,11 +156,75 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     return Uint8List.fromList(img.encodeJpg(imageBuffer, quality: 70));
   }
 
-  /// 3초간 실시간으로 프레임 캡처 → 한 번에 서버 전송
+  /// ── 1) 메인 프레임 캡처 함수 ─────────────────────────────────────────────
+  ///
+  /// widget.category가 "자음" or "모음"이면 → _captureStaticFrames()
+  /// 그렇지 않으면 → _captureDynamicFrames()
+  ///
   Future<void> _captureFramesAndSend() async {
     if (!_isCameraInitialized || _cameraController == null) return;
-    if (_isCapturingFrames) return; // 이미 인식 중이면 중복 방지
+    if (_isCapturingFrames) return; // 중복 방지
 
+    // 정적(자음/모음) 모드라면 5장만 촬영
+    final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
+    if (isStaticMode) {
+      await _captureStaticFrames();
+    } else {
+      await _captureDynamicFrames();
+    }
+  }
+
+  /// ── 2) 정적 모드: 이미지 5장만 캡처해서 서버로 전송 ────────────────────────
+  Future<void> _captureStaticFrames() async {
+    setState(() {
+      _isCapturingFrames = true;
+      _hasSentFrames = false;
+      // _countdown은 동적 모드 전용이므로 여기선 사용하지 않음
+    });
+
+    List<Uint8List> frameList = [];
+    int captured = 0;
+
+    // 카메라 스트림을 시작하고, 첫 5개의 프레임을 모아 서브리스트로 저장
+    await _cameraController!.startImageStream((CameraImage image) async {
+      if (!_isCapturingFrames) return;
+
+      try {
+        if (image.format.group == ImageFormatGroup.bgra8888) {
+          final jpgBytes = await _bgra8888ToJpeg(image);
+          frameList.add(jpgBytes);
+          captured++;
+        }
+      } catch (e) {
+        print("정적 프레임 변환 실패: $e");
+      }
+
+      // 5장 모이면 스트림 종료
+      if (captured >= STATIC_MAX) {
+        _isCapturingFrames = false;
+        await _cameraController!.stopImageStream();
+      }
+    });
+
+    // 실제로, 이미지 스트림을 완전히 멈출 때까지 대기
+    // (startImageStream 내부에서 _isCapturingFrames=false가 세팅되면 stopImageStream이 호출됨)
+    while (_isCapturingFrames) {
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+
+    print("정적 모드: 보낼 프레임 개수 = ${frameList.length}");
+
+    // 서버 전송 상태 유지
+    setState(() {
+      _hasSentFrames = false;
+      // _countdown은 동적 모드 전용이므로 0으로 두거나 신경 쓰지 않아도 됨
+    });
+
+    await _sendFramesToServerAllAtOnce(frameList);
+  }
+
+  /// ── 3) 동적 모드: 3초 동안 프레임 캡처 후 서버 전송 ────────────────────────
+  Future<void> _captureDynamicFrames() async {
     setState(() {
       _isCapturingFrames = true;
       _hasSentFrames = false;
@@ -171,7 +236,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     final sw = Stopwatch()..start();
     final done = Completer<void>();
 
-    // 1초 간격으로 카운트다운
+    // 1초마다 카운트다운 UI 업데이트
     Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 1) {
         setState(() => _countdown--);
@@ -181,7 +246,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
     });
 
-    // 이미지 스트림 시작
     _cameraController!.startImageStream((CameraImage image) async {
       if (!_isCapturingFrames) return;
 
@@ -191,12 +255,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           frameList.add(jpgBytes);
         }
       } catch (e) {
-        print("프레임 변환 실패: $e");
+        print("동적 프레임 변환 실패: $e");
       }
 
       frameCount++;
       if (sw.elapsedMilliseconds > 3000 || frameCount >= MAX_FRAMES) {
-        // 3초가 지났거나 최대 프레임 수에 도달하면 스트림 중지
+        // 3초가 지났거나 MAX_FRAMES 도달 시 스트림 중지
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
         sw.stop();
@@ -204,24 +268,23 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
     });
 
-    // 3초가 끝나기를 기다림
+    // 3초가 완전히 지나기를 기다림
     await done.future;
-    print("보낼 프레임 개수: ${frameList.length}");
+    print("동적 모드: 보낼 프레임 개수 = ${frameList.length}");
 
-    // “인식 중...” 상태로 보여주기
     setState(() {
       _countdown = 0;
-      _isCapturingFrames = true; // 서버 응답 대기 중에도 true로 유지
+      // 서버 응답 대기 시에도 true 유지 (필요시 UI에서 “인식 중...” 처리)
+      _isCapturingFrames = true;
     });
 
-    // 서버로 전송
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
+  /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
-    // 정적(자음/모음)인지 여부
-    final bool isStatic = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
+    final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
+    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign'; // 실제 엔드포인트로 변경
 
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
@@ -229,17 +292,18 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     final doc = _letters[currentIndex];
     final String step = doc['question'] ?? '기본';
 
-    // 한글 카테고리명을 영어 키로 변환 (동적 카테고리만)
+    // 동적 카테고리인 경우 한글 → 영어 매핑
     final String engCategory = korToEngCategory[widget.category] ?? widget.category;
 
     var request = http.MultipartRequest('POST', uri);
 
-    if (isStatic) {
-      // ── 정적 모드: 'image' 키로 첫 프레임만 전송 ──
+    if (isStaticMode) {
+      // ── 정적 모드: 'images' 키로 첫 프레임만 전송 ──
       if (frames.isNotEmpty) {
+        // 이제 5장 중 첫 1장만 서버로 보내도 SVM 예측 처리됨
         request.files.add(
           http.MultipartFile.fromBytes(
-            'image', // 반드시 'image' 키 사용
+            'images',
             frames.first,
             filename: 'frame_static.jpg',
             contentType: MediaType('image', 'jpeg'),
@@ -320,7 +384,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     }
   }
 
-  /// 서버 응답에 따른 처리: O/X
+  /// ── 5) 서버 응답 처리: O/X 다이얼로그 ───────────────────────────────────
   void _handleResult(String result) {
     final bool isCorrect = result == 'O';
     if (isCorrect) correctCount++;
@@ -337,7 +401,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _goToNext(); // 자동으로 다음 문제로 이동
+              _goToNext(); // 다음 문제로 이동
             },
             child: const Text('다음'),
           ),
@@ -350,6 +414,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       _countdown = 0;
     });
   }
+
 
   void _goToPrevious() async {
     if (currentIndex > 0) {
