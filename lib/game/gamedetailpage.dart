@@ -158,6 +158,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('정답입니다!', textAlign: TextAlign.center),
           content: const Text('잘했어요! 다음 문제로 넘어갑니다.'),
           actions: [
@@ -186,6 +187,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
           title: const Text('틀렸습니다', textAlign: TextAlign.center),
           content: const Text('아쉽지만 다음 문제로 넘어갑니다.'),
           actions: [
