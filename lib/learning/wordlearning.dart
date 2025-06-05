@@ -12,8 +12,20 @@ import 'package:image/image.dart' as img;
 
 import '../constants/constants.dart';
 
+// — 한글→영어 매핑 테이블 추가 —
+const Map<String, String> korToEngCategory = {
+  "동물":   "animal",
+  "개념":   "concept",
+  "문화":   "culture",
+  "경제생활":   "economic",
+  "기타":   "etc",
+  "삶":   "human",
+  "주생활":   "life",
+  "사회생활":   "social",
+};
+
 class LearningDetailPage extends StatefulWidget {
-  final String category;
+  final String category; // 예: "동물", "개념", "문화", "경제", "기타", "인물", "생활", "사회" 또는 "자음"/"모음"
 
   const LearningDetailPage({Key? key, required this.category}) : super(key: key);
 
@@ -172,6 +184,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     // 3초가 끝나기를 기다림
     await done.future;
+    print("보낼 프레임 개수: ${frameList.length}");
 
     // 서버로 전송
     await _sendFramesToServerAllAtOnce(frameList);
@@ -179,7 +192,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final url =
-        'https://85f0-2001-2d8-2009-3f17-4dd8-85d2-3e65-404b.ngrok-free.app/check-sign';
+        'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
     final uri = Uri.parse(url.trim());
 
     final storage = FlutterSecureStorage();
@@ -187,6 +200,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     final doc = _letters[currentIndex];
     final String step = doc['question'] ?? '기본';
+
+    // — 여기가 핵심: 한글 카테고리명을 영어 키로 변환 —
+    final String engCategory = korToEngCategory[widget.category] ?? widget.category;
 
     var request = http.MultipartRequest('POST', uri);
 
@@ -201,9 +217,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         ),
       );
     }
-    request.fields['user_id'] = userId;
-    request.fields['category'] = widget.category;
-    request.fields['step'] = step;
+    request.fields['user_id']  = userId;
+    request.fields['category'] = engCategory; // 반드시 영어 키 사용
+    request.fields['step']     = step;        // 예: "강아지" 단어(=question)
 
     try {
       final streamedResponse = await request.send();
