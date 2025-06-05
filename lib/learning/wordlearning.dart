@@ -1,6 +1,9 @@
+// learning_detail_page.dart
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -12,7 +15,7 @@ import 'package:image/image.dart' as img;
 
 import '../constants/constants.dart';
 
-// — 한글→영어 매핑 테이블 추가 —
+// — 한글→영어 매핑 테이블 (동적 카테고리에서만 영어 키 사용) —
 const Map<String, String> korToEngCategory = {
   "동물":   "animal",
   "개념":   "concept",
@@ -22,10 +25,13 @@ const Map<String, String> korToEngCategory = {
   "삶":   "human",
   "주생활":   "life",
   "사회생활":   "social",
+  // 정적(자음/모음)은 한글 그대로 사용
+  "자음":   "자음",
+  "모음":   "모음",
 };
 
 class LearningDetailPage extends StatefulWidget {
-  final String category;
+  final String category; // 예: "자음", "모음", "동물", "개념" 등
 
   const LearningDetailPage({Key? key, required this.category}) : super(key: key);
 
@@ -51,6 +57,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   bool _isCapturingFrames = false;
   bool _hasSentFrames = false;
   int _countdown = 0; // 카운트다운 타이머 값
+
+  static const int MIN_FRAMES = 10; // 동적 처리 시 최소 필요 프레임 수
+  static const int MAX_FRAMES = 60; // 3초간 대략 수집할 최대 프레임 수
 
   @override
   void initState() {
@@ -115,12 +124,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
   Future<void> _initCamera() async {
     _cameras = await availableCameras();
-    final frontCamera = _cameras?.firstWhere(
+    final frontCamera = _cameras!.firstWhere(
           (camera) => camera.lensDirection == CameraLensDirection.front,
       orElse: () => _cameras!.first,
     );
     _cameraController = CameraController(
-      frontCamera!,
+      frontCamera,
       ResolutionPreset.medium,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.bgra8888,
@@ -158,7 +167,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
 
     List<Uint8List> frameList = [];
-    int maxFrames = 60; // 약 3초 * 20fps
+    int maxFrames = MAX_FRAMES;
     int frameCount = 0;
     final Stopwatch sw = Stopwatch()..start();
     Completer<void> done = Completer();
@@ -168,7 +177,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       if (_countdown > 1) {
         setState(() => _countdown--);
       } else {
-        // countdown가 1일 때 1초 후 0이 됨
         timer.cancel();
         setState(() => _countdown = 0);
       }
@@ -212,20 +220,24 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   }
 
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
-    final url =
-        'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
-    final uri = Uri.parse(url.trim());
+    // 동적 카테고리만 영어 키로 전송
+    final bool isStatic = (widget.category == "자음" || widget.category == "모음");
+    final String url = isStatic
+        ? 'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign'
+        : 'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
 
+    final uri = Uri.parse(url.trim());
     final storage = FlutterSecureStorage();
     final userId = await storage.read(key: 'user_id') ?? 'user123';
-
     final doc = _letters[currentIndex];
     final String step = doc['question'] ?? '기본';
 
-    // — 한글 카테고리명을 영어 키로 변환 —
+    // 한글 카테고리명을 영어 키로 변환 (동적 카테고리만)
     final String engCategory = korToEngCategory[widget.category] ?? widget.category;
 
     var request = http.MultipartRequest('POST', uri);
+
+    // 'images' 키로 여러 프레임 전송
     for (int i = 0; i < frames.length; i++) {
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -237,7 +249,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       );
     }
     request.fields['user_id']  = userId;
-    request.fields['category'] = engCategory;
+    request.fields['category'] = isStatic ? widget.category : engCategory;
     request.fields['step']     = step;
 
     try {
@@ -247,33 +259,82 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final String result = data['result'] ?? '인식 성공!';
-        if (mounted) {
+        final String status = data['status'] ?? '';
+        if (status == 'success') {
+          final String predicted = data['predicted'] ?? '';
+          final String result = data['result'] ?? '';
+          _handleResult(result);
+        } else if (status == 'waiting') {
+          // 동적 모드에서 MIN_FRAMES 미만일 때
+          final int collected = data['frames_collected'] ?? 0;
+          final int needed = data['needed'] ?? MIN_FRAMES;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result)),
+            SnackBar(content: Text("현재 $collected장 수집, $needed장 더 필요")),
           );
+          setState(() {
+            _hasSentFrames = false;
+            _isCapturingFrames = false;
+          });
+        } else {
+          // 실패 케이스
+          final String error = data['error'] ?? '알 수 없는 오류';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("예측 실패: $error")),
+          );
+          setState(() {
+            _hasSentFrames = false;
+            _isCapturingFrames = false;
+          });
         }
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('서버 오류: ${response.body}')),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('서버 오류: ${response.body}')),
+        );
+        setState(() {
+          _hasSentFrames = false;
+          _isCapturingFrames = false;
+        });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('네트워크 오류: $e')),
-        );
-      }
-    } finally {
-      // 인식 완료 후 버튼을 “완료” 상태로 변경
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('네트워크 오류: $e')),
+      );
       setState(() {
-        _hasSentFrames = true;
+        _hasSentFrames = false;
         _isCapturingFrames = false;
-        _countdown = 0;
       });
     }
+  }
+
+  /// 서버 응답에 따른 처리: O/X
+  void _handleResult(String result) {
+    final bool isCorrect = result == 'O';
+    if (isCorrect) correctCount++;
+
+    showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(isCorrect ? '정답입니다!' : '틀렸습니다'),
+        content: Text(isCorrect
+            ? '잘 하셨습니다.'
+            : '아쉽지만 정답은 다음 기회에 도전해 보세요.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _goToNext(); // 자동으로 다음 문제로 이동
+            },
+            child: const Text('다음'),
+          ),
+        ],
+      ),
+    );
+    setState(() {
+      _hasSentFrames = true;
+      _isCapturingFrames = false;
+      _countdown = 0;
+    });
   }
 
   void _goToPrevious() async {
@@ -293,10 +354,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
   void _goToNext() async {
     if (!_isAnswered[currentIndex]) {
-      setState(() {
-        correctCount++;
-        _isAnswered[currentIndex] = true;
-      });
+      _isAnswered[currentIndex] = true;
     }
     if (currentIndex == _letters.length - 1) {
       _showCompleteDialog();
@@ -530,7 +588,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
               ),
             ),
 
-            // ── 수어 인식 버튼 ──
+            // ── 수어 인식 3초 연속 버튼 ──
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6.0),
               child: SizedBox(
@@ -588,23 +646,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                   : const Center(child: CircularProgressIndicator()),
             ),
 
-            // ── 이전 / 다음 버튼 ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 40),
-                    onPressed: _goToPrevious,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward, size: 40),
-                    onPressed: _goToNext,
-                  ),
-                ],
-              ),
-            ),
+            // 이전/다음 버튼 제거 → 자동으로 처리하기 위해 UI에서 삭제
+
           ],
         ),
       ),
