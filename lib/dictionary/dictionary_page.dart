@@ -44,8 +44,8 @@ class _DictionaryPageState extends State<DictionaryPage> {
 
   Future<void> fetchWordsFromFirebase() async {
     List<String> categories = [
-      '개념', '경제생활', '기타', '동식물', '모음',
-      '문화', '사회생활', '삶', '식생활', '인간',
+      '개념', '경제생활', '동물', '모음',
+      '문화', '사회생활', '삶', '기타', '인간',
       '자음', '주생활'
     ];
 
