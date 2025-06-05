@@ -31,7 +31,7 @@ class GameGuidePage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildGameInfoBox(),
+            _buildGameInfoBox(),  // 이 박스가 버튼 너비만큼 늘어나도록 수정
             const SizedBox(height: 30),
             SizedBox(
               width: double.infinity,
@@ -67,6 +67,7 @@ class GameGuidePage extends StatelessWidget {
 
   Widget _buildGameInfoBox() {
     return Container(
+      width: double.infinity, // ← 이 부분을 추가했습니다.
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -96,5 +97,4 @@ class GameGuidePage extends StatelessWidget {
       ),
     );
   }
-
 }
