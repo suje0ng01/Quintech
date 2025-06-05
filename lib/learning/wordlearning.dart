@@ -167,10 +167,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
 
     List<Uint8List> frameList = [];
-    int maxFrames = MAX_FRAMES;
     int frameCount = 0;
-    final Stopwatch sw = Stopwatch()..start();
-    Completer<void> done = Completer();
+    final sw = Stopwatch()..start();
+    final done = Completer<void>();
 
     // 1초 간격으로 카운트다운
     Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -196,7 +195,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
 
       frameCount++;
-      if (sw.elapsedMilliseconds > 3000 || frameCount >= maxFrames) {
+      if (sw.elapsedMilliseconds > 3000 || frameCount >= MAX_FRAMES) {
         // 3초가 지났거나 최대 프레임 수에 도달하면 스트림 중지
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
@@ -220,13 +219,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   }
 
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
-    // 동적 카테고리만 영어 키로 전송
+    // 정적(자음/모음)인지 여부
     final bool isStatic = (widget.category == "자음" || widget.category == "모음");
-    final String url = isStatic
-        ? 'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign'
-        : 'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
+    final String url = 'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
 
-    final uri = Uri.parse(url.trim());
+    final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
     final userId = await storage.read(key: 'user_id') ?? 'user123';
     final doc = _letters[currentIndex];
@@ -237,20 +234,37 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     var request = http.MultipartRequest('POST', uri);
 
-    // 'images' 키로 여러 프레임 전송
-    for (int i = 0; i < frames.length; i++) {
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'images',
-          frames[i],
-          filename: 'frame_$i.jpg',
-          contentType: MediaType('image', 'jpeg'),
-        ),
-      );
+    if (isStatic) {
+      // ── 정적 모드: 'image' 키로 첫 프레임만 전송 ──
+      if (frames.isNotEmpty) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'image', // 반드시 'image' 키 사용
+            frames.first,
+            filename: 'frame_static.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
+      }
+      request.fields['user_id']  = userId;
+      request.fields['category'] = widget.category; // "자음" or "모음"
+      request.fields['step']     = step;
+    } else {
+      // ── 동적 모드: 'images' 키로 모든 프레임 전송 ──
+      for (int i = 0; i < frames.length; i++) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'images',
+            frames[i],
+            filename: 'frame_$i.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
+      }
+      request.fields['user_id']  = userId;
+      request.fields['category'] = engCategory; // "animal", "concept", ...
+      request.fields['step']     = step;
     }
-    request.fields['user_id']  = userId;
-    request.fields['category'] = isStatic ? widget.category : engCategory;
-    request.fields['step']     = step;
 
     try {
       final streamedResponse = await request.send();
