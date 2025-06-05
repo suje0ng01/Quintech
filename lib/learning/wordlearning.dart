@@ -221,7 +221,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     // 정적(자음/모음)인지 여부
     final bool isStatic = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://d8cc-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
+    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
 
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
@@ -269,13 +269,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      print('서버 응답: ${response.body}');
+      print('🚀 서버 응답: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final String status = data['status'] ?? '';
+
         if (status == 'success') {
-          final String predicted = data['predicted'] ?? '';
           final String result = data['result'] ?? '';
           _handleResult(result);
         } else if (status == 'waiting') {
@@ -367,13 +367,23 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   }
 
   void _goToNext() async {
+    // 현재 문제에 대한 답안 채점 완료 표시
     if (!_isAnswered[currentIndex]) {
       _isAnswered[currentIndex] = true;
     }
+    // 마지막 문제인지 확인
     if (currentIndex == _letters.length - 1) {
-      _showCompleteDialog();
+      // 전체 정답률 계산
+      double ratio = totalCount > 0 ? (correctCount / totalCount) : 0.0;
+      // 80% 이상 통과 여부에 따라 다이얼로그 분기
+      if (ratio >= 0.8) {
+        _showCompleteDialog(passed: true);
+      } else {
+        _showCompleteDialog(passed: false);
+      }
       return;
     }
+    // 마지막 문제가 아니라면 다음으로 이동
     setState(() {
       currentIndex++;
       _isLoading = true;
@@ -386,25 +396,34 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
   }
 
-  void _showCompleteDialog() {
+  /// passed == true/false 둘 다 “확인” 버튼만 나오게 수정
+  void _showCompleteDialog({required bool passed}) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text(
-          '학습 완료',
+        title: Text(
+          passed ? '학습 완료 🎉' : '학습 미달',
           textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              '해당 챕터를 완료했어요!\n다음 챕터에 도전하세요',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16),
-            ),
+            if (passed) ...[
+              const Text(
+                '해당 챕터를 80% 이상 맞히셨어요!\n축하드립니다!',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+            ] else ...[
+              const Text(
+                '아쉽게도 정답률이 80% 미만입니다.\n다시 학습해 주세요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+            ],
             const SizedBox(height: 10),
             Text(
               '정답: $correctCount / $totalCount',
@@ -422,11 +441,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await _savePracticeResult();
-              if (mounted) Navigator.pop(context);
+              // “확인” 버튼을 누르면 다이얼로그 닫고, 이 페이지도 함께 닫아서
+              // 이전 화면으로 돌아가도록 함
+              Navigator.pop(context);
             },
             child: const Text(
-              '다른 챕터 보기',
+              '확인',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.blue,
@@ -524,7 +544,10 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           title: Text(
             widget.category,
             style: const TextStyle(
-                fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24),
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontSize: 24,
+            ),
           ),
           centerTitle: true,
           leading: IconButton(
@@ -661,7 +684,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             ),
 
             // 이전/다음 버튼 제거 → 자동으로 처리하기 위해 UI에서 삭제
-
           ],
         ),
       ),
