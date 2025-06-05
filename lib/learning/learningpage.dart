@@ -101,7 +101,6 @@ class _LearningPageState extends State<LearningPage> {
     List<String> categories = [
       '주생활',
       '동물',
-      '인간',
       '사회생활',
       '삶',
       '문화',
