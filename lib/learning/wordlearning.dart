@@ -206,15 +206,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
     });
 
-    // 실제로, 이미지 스트림을 완전히 멈출 때까지 대기
-    // (startImageStream 내부에서 _isCapturingFrames=false가 세팅되면 stopImageStream이 호출됨)
+    // 이미지 스트림이 완전히 멈출 때까지 대기
     while (_isCapturingFrames) {
       await Future.delayed(const Duration(milliseconds: 50));
     }
 
     print("정적 모드: 보낼 프레임 개수 = ${frameList.length}");
 
-    // 서버 전송 상태 유지
     setState(() {
       _hasSentFrames = false;
       // _countdown은 동적 모드 전용이므로 0으로 두거나 신경 쓰지 않아도 됨
@@ -284,7 +282,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign'; // 실제 엔드포인트로 변경
+    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
 
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
@@ -298,14 +296,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     var request = http.MultipartRequest('POST', uri);
 
     if (isStaticMode) {
-      // ── 정적 모드: 'images' 키로 첫 프레임만 전송 ──
-      if (frames.isNotEmpty) {
-        // 이제 5장 중 첫 1장만 서버로 보내도 SVM 예측 처리됨
+      // ── 정적 모드: 최대 STATIC_MAX 장(=5장)까지 전송 ──
+      for (int i = 0; i < frames.length && i < STATIC_MAX; i++) {
         request.files.add(
           http.MultipartFile.fromBytes(
             'images',
-            frames.first,
-            filename: 'frame_static.jpg',
+            frames[i],
+            filename: 'frame_static_$i.jpg',
             contentType: MediaType('image', 'jpeg'),
           ),
         );
@@ -340,8 +337,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         final String status = data['status'] ?? '';
 
         if (status == 'success') {
-          final String result = data['result'] ?? '';
-          _handleResult(result);
+          if (isStaticMode) {
+            // 정적 모드일 때는 status==success만으로 정답 처리
+            _handleResult("O");
+          } else {
+            final String result = data['result'] ?? '';
+            _handleResult(result);
+          }
         } else if (status == 'waiting') {
           // 동적 모드에서 MIN_FRAMES 미만일 때
           final int collected = data['frames_collected'] ?? 0;
@@ -415,7 +417,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
   }
 
-
+  /// 이전 문제로 이동 (필요 시 사용 가능)
   void _goToPrevious() async {
     if (currentIndex > 0) {
       setState(() {
@@ -431,16 +433,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     }
   }
 
+  /// 다음 문제로 이동
   void _goToNext() async {
-    // 현재 문제에 대한 답안 채점 완료 표시
     if (!_isAnswered[currentIndex]) {
       _isAnswered[currentIndex] = true;
     }
-    // 마지막 문제인지 확인
     if (currentIndex == _letters.length - 1) {
-      // 전체 정답률 계산
       double ratio = totalCount > 0 ? (correctCount / totalCount) : 0.0;
-      // 80% 이상 통과 여부에 따라 다이얼로그 분기
       if (ratio >= 0.8) {
         _showCompleteDialog(passed: true);
       } else {
@@ -448,7 +447,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
       return;
     }
-    // 마지막 문제가 아니라면 다음으로 이동
     setState(() {
       currentIndex++;
       _isLoading = true;
@@ -461,7 +459,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
   }
 
-  /// passed == true/false 둘 다 “확인” 버튼만 나오게 수정
+  /// 학습 완료/미달 다이얼로그
   void _showCompleteDialog({required bool passed}) {
     showDialog(
       context: context,
@@ -506,8 +504,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              // “확인” 버튼을 누르면 다이얼로그 닫고, 이 페이지도 함께 닫아서
-              // 이전 화면으로 돌아가도록 함
               Navigator.pop(context);
             },
             child: const Text(
@@ -524,13 +520,14 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     );
   }
 
+  /// ContentType 구분 (서버 저장용)
   String _getContentType(String category) {
     if (category == "모음") return "VOWEL";
     if (category == "자음") return "CONSONANT";
     return "WORD";
   }
 
-  /// 학습 결과 서버에 저장
+  /// 학습 결과 서버에 저장 (필요 시 호출)
   Future<void> _savePracticeResult() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
@@ -597,8 +594,10 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     final String letter = doc['question'] ?? '';
     final String imageUrl = doc['imageUrl'] ?? '';
 
-    // “진행률” 바가 들어있는 Padding: horizontal 16이므로, 전체 화면 너비 - 32가 진행률 바의 너비
+    // “진행률” 바 너비 계산
     final double boxWidth = MediaQuery.of(context).size.width - 32;
+    // 카메라 프리뷰 크기 작게(스크롤 없이 보일 정도)
+    final double cameraSize = 260;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -623,134 +622,129 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // ── 진행률 표시 ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      body: Column(
+        children: [
+          // ── 진행률 표시 ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: (currentIndex + 1) / _letters.length,
+                  color: Colors.blue,
+                  backgroundColor: Colors.grey[300],
+                ),
+                const SizedBox(height: 4),
+                Text('${currentIndex + 1}/${_letters.length}'),
+                const SizedBox(height: 8),
+                Text('정답 수: $correctCount / $totalCount'),
+              ],
+            ),
+          ),
+
+          // ── 카드: 따라하기 영상/이미지 ──
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  LinearProgressIndicator(
-                    value: (currentIndex + 1) / _letters.length,
-                    color: Colors.blue,
-                    backgroundColor: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 4),
-                  Text('${currentIndex + 1}/${_letters.length}'),
+                  const Text('따라 해보세요', style: TextStyle(fontSize: 18)),
                   const SizedBox(height: 8),
-                  Text('정답 수: $correctCount / $totalCount'),
+                  Text(
+                    letter,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: boxWidth,
+                    height: 180,
+                    child: _isVideo(imageUrl)
+                        ? (_videoController != null && _videoController!.value.isInitialized
+                        ? AspectRatio(
+                      aspectRatio: _videoController!.value.aspectRatio,
+                      child: VideoPlayer(_videoController!),
+                    )
+                        : const Center(child: CircularProgressIndicator()))
+                        : Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        image: imageUrl.isNotEmpty
+                            ? DecorationImage(
+                          image: NetworkImage(imageUrl),
+                          fit: BoxFit.contain,
+                        )
+                            : null,
+                      ),
+                      child: imageUrl.isEmpty ? const Center(child: Text('이미지 없음')) : null,
+                    ),
+                  ),
                 ],
               ),
             ),
+          ),
 
-            // ── 카드: 따라하기 영상/이미지 ──
-            Card(
-              margin: const EdgeInsets.all(16),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    const Text('따라 해보세요', style: TextStyle(fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text(
-                      letter,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    // 진행률 바와 동일한 너비로 설정
-                    SizedBox(
-                      width: boxWidth,
-                      height: 200,
-                      child: _isVideo(imageUrl)
-                          ? (_videoController != null && _videoController!.value.isInitialized
-                          ? AspectRatio(
-                        aspectRatio: _videoController!.value.aspectRatio,
-                        child: VideoPlayer(_videoController!),
-                      )
-                          : const Center(child: CircularProgressIndicator()))
-                          : Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          image: imageUrl.isNotEmpty
-                              ? DecorationImage(
-                            image: NetworkImage(imageUrl),
-                            fit: BoxFit.contain,
-                          )
-                              : null,
-                        ),
-                        child: imageUrl.isEmpty
-                            ? const Center(child: Text('이미지 없음'))
-                            : null,
-                      ),
-                    ),
-                  ],
+          // ── 수어 인식 버튼 (크기 축소 및 앱바 색상 적용) ──
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6.0),
+            child: SizedBox(
+              width: 180,
+              height: 45,
+              child: ElevatedButton.icon(
+                onPressed: (!_isCapturingFrames && !_hasSentFrames)
+                    ? _captureFramesAndSend
+                    : null,
+                icon: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 20),
+                label: _countdown > 0
+                    ? Text(
+                  '$_countdown',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                )
+                    : _isCapturingFrames
+                    ? const Text(
+                  '인식 중...',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                )
+                    : _hasSentFrames
+                    ? const Text(
+                  '완료',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                )
+                    : const Text(
+                  '수어 인식',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.appbarcolor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
             ),
+          ),
 
-            // ── 수어 인식 3초 연속 버튼 ──
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6.0),
-              child: SizedBox(
-                width: 220,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: (!_isCapturingFrames && !_hasSentFrames)
-                      ? _captureFramesAndSend
-                      : null,
-                  icon: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 24),
-                  label: _countdown > 0
-                      ? Text(
-                    '$_countdown',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  )
-                      : _isCapturingFrames
-                      ? const Text(
-                    '인식 중...',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  )
-                      : _hasSentFrames
-                      ? const Text(
-                    '완료',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  )
-                      : const Text(
-                    '수어 인식 3초 연속',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                ),
-              ),
+          // ── 카메라 프리뷰 (크기 260×260) ──
+          Container(
+            width: cameraSize,
+            height: cameraSize,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.black),
+              borderRadius: BorderRadius.circular(10),
             ),
-
-            // ── 카메라 프리뷰 ──
-            Container(
-              width: 200,
-              height: 200,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-                borderRadius: BorderRadius.circular(10),
+            child: _isCameraInitialized && _cameraController != null
+                ? ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: AspectRatio(
+                aspectRatio: _cameraController!.value.aspectRatio,
+                child: CameraPreview(_cameraController!),
               ),
-              child: _isCameraInitialized && _cameraController != null
-                  ? ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: AspectRatio(
-                  aspectRatio: _cameraController!.value.aspectRatio,
-                  child: CameraPreview(_cameraController!),
-                ),
-              )
-                  : const Center(child: CircularProgressIndicator()),
-            ),
+            )
+                : const Center(child: CircularProgressIndicator()),
+          ),
 
-            // 이전/다음 버튼 제거 → 자동으로 처리하기 위해 UI에서 삭제
-          ],
-        ),
+          // 이전/다음 버튼은 자동 처리되므로 UI에 따로 표시하지 않음.
+        ],
       ),
     );
   }

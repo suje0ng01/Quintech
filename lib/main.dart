@@ -11,7 +11,6 @@ import 'dictionary/dictionary_page.dart';
 import 'member/login.dart';
 import 'member/profilepage.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -33,7 +32,40 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(scaffoldBackgroundColor: Colors.white),
-      home: const HomeScreen(),
+      home: const SplashScreen(), // 여기만 SplashScreen으로!
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFEDEAE5),
+      body: Center(
+        child: Image.asset(
+          'assets/logo.png', // ← 로고 파일 실제 경로로 맞춰주세요!
+          width: 180,
+        ),
+      ),
     );
   }
 }
@@ -132,9 +164,7 @@ class CustomButton extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (context) => LearningPage()),
             );
-          }
-
-          else if (text == '게임') {
+          } else if (text == '게임') {
             if (!loginState.isLoggedIn) {
               showDialog(
                 context: context,
@@ -162,16 +192,12 @@ class CustomButton extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => GameGuidePage()),
               );
             }
-          }
-
-          else if (text == '단어장') {
+          } else if (text == '단어장') {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => DictionaryPage()),
             );
-          }
-
-          else if (text == '한국수어사전') {
+          } else if (text == '한국수어사전') {
             Navigator.push(
               context,
               MaterialPageRoute(
