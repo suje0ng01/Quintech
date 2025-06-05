@@ -25,7 +25,7 @@ const Map<String, String> korToEngCategory = {
 };
 
 class LearningDetailPage extends StatefulWidget {
-  final String category; // 예: "동물", "개념", "문화", "경제", "기타", "인물", "생활", "사회" 또는 "자음"/"모음"
+  final String category;
 
   const LearningDetailPage({Key? key, required this.category}) : super(key: key);
 
@@ -50,6 +50,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   // “수어 인식 3초 연속” 버튼 상태 관리용
   bool _isCapturingFrames = false;
   bool _hasSentFrames = false;
+  int _countdown = 0; // 카운트다운 타이머 값
 
   @override
   void initState() {
@@ -78,7 +79,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       totalCount = snapshot.docs.length;
       _isLoading = false;
       _isAnswered = List.filled(snapshot.docs.length, false);
-      _hasSentFrames = false; // 첫 문제로 시작할 때 아직 전송 안 된 상태
+      _hasSentFrames = false;
+      _countdown = 0;
     });
 
     if (_letters.isNotEmpty) {
@@ -150,7 +152,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     if (_isCapturingFrames) return; // 이미 인식 중이면 중복 방지
 
     setState(() {
-      _isCapturingFrames = true; // 버튼을 “인식 중…” 상태로 변경
+      _isCapturingFrames = true;
+      _hasSentFrames = false;
+      _countdown = 3; // 3초 카운트다운 시작
     });
 
     List<Uint8List> frameList = [];
@@ -158,6 +162,17 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     int frameCount = 0;
     final Stopwatch sw = Stopwatch()..start();
     Completer<void> done = Completer();
+
+    // 1초 간격으로 카운트다운
+    Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown > 1) {
+        setState(() => _countdown--);
+      } else {
+        // countdown가 1일 때 1초 후 0이 됨
+        timer.cancel();
+        setState(() => _countdown = 0);
+      }
+    });
 
     // 이미지 스트림 시작
     _cameraController!.startImageStream((CameraImage image) async {
@@ -186,6 +201,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     await done.future;
     print("보낼 프레임 개수: ${frameList.length}");
 
+    // “인식 중...” 상태로 보여주기
+    setState(() {
+      _countdown = 0;
+      _isCapturingFrames = true; // 서버 응답 대기 중에도 true로 유지
+    });
+
     // 서버로 전송
     await _sendFramesToServerAllAtOnce(frameList);
   }
@@ -201,12 +222,10 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     final doc = _letters[currentIndex];
     final String step = doc['question'] ?? '기본';
 
-    // — 여기가 핵심: 한글 카테고리명을 영어 키로 변환 —
+    // — 한글 카테고리명을 영어 키로 변환 —
     final String engCategory = korToEngCategory[widget.category] ?? widget.category;
 
     var request = http.MultipartRequest('POST', uri);
-
-    // “images” 필드 이름으로 프레임을 한 번에 모두 추가
     for (int i = 0; i < frames.length; i++) {
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -218,13 +237,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       );
     }
     request.fields['user_id']  = userId;
-    request.fields['category'] = engCategory; // 반드시 영어 키 사용
-    request.fields['step']     = step;        // 예: "강아지" 단어(=question)
+    request.fields['category'] = engCategory;
+    request.fields['step']     = step;
 
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-
       print('서버 응답: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -249,10 +267,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         );
       }
     } finally {
-      // 한 문제당 한 번만 누르도록 상태 변경
+      // 인식 완료 후 버튼을 “완료” 상태로 변경
       setState(() {
         _hasSentFrames = true;
         _isCapturingFrames = false;
+        _countdown = 0;
       });
     }
   }
@@ -262,7 +281,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       setState(() {
         currentIndex--;
         _isLoading = true;
-        _hasSentFrames = false; // 이전 문제로 넘어가면 버튼 다시 활성화
+        _hasSentFrames = false;
+        _countdown = 0;
       });
       await _initializeVideoIfNeeded();
       setState(() {
@@ -285,7 +305,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     setState(() {
       currentIndex++;
       _isLoading = true;
-      _hasSentFrames = false; // 다음 문제로 넘어가면 버튼 다시 활성화
+      _hasSentFrames = false;
+      _countdown = 0;
     });
     await _initializeVideoIfNeeded();
     setState(() {
@@ -415,13 +436,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       );
     }
 
-    // 현재 문제 문서에서 정보 가져오기
     final doc = _letters[currentIndex];
     final String letter = doc['question'] ?? '';
     final String imageUrl = doc['imageUrl'] ?? '';
 
     // “진행률” 바가 들어있는 Padding: horizontal 16이므로, 전체 화면 너비 - 32가 진행률 바의 너비
-    // 따라서 “따라 해보세요” 박스도 같은 너비로 설정하기 위해 아래와 같이 계산
     final double boxWidth = MediaQuery.of(context).size.width - 32;
 
     return Scaffold(
@@ -520,9 +539,14 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 child: ElevatedButton.icon(
                   onPressed: (!_isCapturingFrames && !_hasSentFrames)
                       ? _captureFramesAndSend
-                      : null, // 인식 중이거나 완료된 뒤엔 비활성화
+                      : null,
                   icon: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 24),
-                  label: _isCapturingFrames
+                  label: _countdown > 0
+                      ? Text(
+                    '$_countdown',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  )
+                      : _isCapturingFrames
                       ? const Text(
                     '인식 중...',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
