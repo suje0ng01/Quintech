@@ -27,56 +27,48 @@ public class GameQuestionService {
 
         List<PracticeLog> completedLogs = practiceLogRepository.findByUserAndCompletedTrue(user);
 
-        boolean hasConsonant = false;
-        boolean hasVowel = false;
-        List<PracticeLog> wordLogs = new ArrayList<>();
+        // 자음/모음 완료 여부 확인
+        boolean hasConsonant = completedLogs.stream().anyMatch(log -> log.getContentType() == ContentType.CONSONANT);
+        boolean hasVowel = completedLogs.stream().anyMatch(log -> log.getContentType() == ContentType.VOWEL);
 
-        for (PracticeLog log : completedLogs) {
-            if (log.getContentType() == ContentType.CONSONANT) {
-                hasConsonant = true;
-            } else if (log.getContentType() == ContentType.VOWEL) {
-                hasVowel = true;
-            } else if (log.getContentType() == ContentType.WORD) {
-                wordLogs.add(log);
+        // 단어 완료 주제 수집
+        Set<String> completedTopics = completedLogs.stream()
+                .filter(log -> log.getContentType() == ContentType.WORD)
+                .map(PracticeLog::getTopic)
+                .collect(Collectors.toSet());
+
+        List<GameQuestionDto> fullPool = new ArrayList<>();
+
+        // ✅ 자음 전체 포함
+        if (hasConsonant) {
+            List<String> consonants = List.of("ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ");
+            for (String consonant : consonants) {
+                fullPool.add(new GameQuestionDto(ContentType.CONSONANT, null, consonant));
             }
         }
 
-        List<GameQuestionDto> allQuestions = new ArrayList<>();
-
-        // ✅ 자음 1개 랜덤 포함
-        if (hasConsonant) {
-            List<String> consonants = new ArrayList<>(List.of("ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"));
-            Collections.shuffle(consonants);
-            allQuestions.add(new GameQuestionDto(ContentType.CONSONANT, null, consonants.get(0)));
-        }
-
-        // ✅ 모음 1개 랜덤 포함
+        // ✅ 모음 전체 포함
         if (hasVowel) {
-            List<String> vowels = new ArrayList<>(List.of("ㅏ", "ㅑ", "ㅓ", "ㅕ", "ㅗ", "ㅛ", "ㅜ", "ㅠ", "ㅡ", "ㅣ", "ㅐ", "ㅔ", "ㅚ", "ㅟ", "ㅢ"));
-            Collections.shuffle(vowels);
-            allQuestions.add(new GameQuestionDto(ContentType.VOWEL, null, vowels.get(0)));
+            List<String> vowels = List.of("ㅏ", "ㅑ", "ㅓ", "ㅕ", "ㅗ", "ㅛ", "ㅜ", "ㅠ", "ㅡ", "ㅣ", "ㅐ", "ㅔ", "ㅚ", "ㅟ", "ㅢ");
+            for (String vowel : vowels) {
+                fullPool.add(new GameQuestionDto(ContentType.VOWEL, null, vowel));
+            }
         }
 
-        // ✅ 단어 문제 생성
-        for (PracticeLog wordLog : wordLogs) {
-            allQuestions.addAll(toQuestionDto(wordLog));
+        // ✅ 단어 전체 포함 (완료 주제만)
+        for (String topic : completedTopics) {
+            List<String> words = wordTopicLoader.getWordsByTopic(topic);
+            if (words != null) {
+                for (String word : words) {
+                    fullPool.add(new GameQuestionDto(ContentType.WORD, topic, word));
+                }
+            }
         }
 
-        Collections.shuffle(allQuestions);
-        return allQuestions.stream()
-                .limit(20)
-                .collect(Collectors.toList());
-    }
+        // ✅ 전체 pool에서 랜덤 섞기
+        Collections.shuffle(fullPool);
 
-    private List<GameQuestionDto> toQuestionDto(PracticeLog log) {
-        if (log.getContentType() != ContentType.WORD) return Collections.emptyList();
-
-        String topic = log.getTopic();
-        List<String> words = wordTopicLoader.getWordsByTopic(topic);
-        if (words == null || words.isEmpty()) return Collections.emptyList();
-
-        return words.stream()
-                .map(word -> new GameQuestionDto(ContentType.WORD, topic, word))
-                .collect(Collectors.toList());
+        // ✅ 최대 20문제만 반환
+        return fullPool.stream().limit(20).collect(Collectors.toList());
     }
 }
