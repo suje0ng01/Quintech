@@ -34,8 +34,10 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   int correctCount = 0;
   int totalCount = 0;
   List<bool> _isAnswered = [];
-  String _resultText = '';
+
+  // “수어 인식 3초 연속” 버튼 상태 관리용
   bool _isCapturingFrames = false;
+  bool _hasSentFrames = false;
 
   @override
   void initState() {
@@ -64,6 +66,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       totalCount = snapshot.docs.length;
       _isLoading = false;
       _isAnswered = List.filled(snapshot.docs.length, false);
+      _hasSentFrames = false; // 첫 문제로 시작할 때 아직 전송 안 된 상태
     });
 
     if (_letters.isNotEmpty) {
@@ -91,7 +94,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
   bool _isVideo(String url) {
     final lowerUrl = url.toLowerCase();
-    return lowerUrl.contains('.mp4') || lowerUrl.contains('.mov') || lowerUrl.contains('.avi');
+    return lowerUrl.contains('.mp4') ||
+        lowerUrl.contains('.mov') ||
+        lowerUrl.contains('.avi');
   }
 
   Future<void> _initCamera() async {
@@ -127,19 +132,22 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     return Uint8List.fromList(img.encodeJpg(imageBuffer, quality: 70));
   }
 
-  // 3초간 실시간 프레임 연속 캡처 & 서버로 한 번에 50장 전송
+  /// 3초간 실시간으로 프레임 캡처 → 한 번에 서버 전송
   Future<void> _captureFramesAndSend() async {
     if (!_isCameraInitialized || _cameraController == null) return;
-    if (_isCapturingFrames) return; // 중복 방지
+    if (_isCapturingFrames) return; // 이미 인식 중이면 중복 방지
 
-    setState(() { _resultText = '3초간 실시간 인식 중...'; });
+    setState(() {
+      _isCapturingFrames = true; // 버튼을 “인식 중…” 상태로 변경
+    });
+
     List<Uint8List> frameList = [];
-    _isCapturingFrames = true;
-    int maxFrames = 60; // 3초 20fps
+    int maxFrames = 60; // 약 3초 * 20fps
     int frameCount = 0;
     final Stopwatch sw = Stopwatch()..start();
     Completer<void> done = Completer();
 
+    // 이미지 스트림 시작
     _cameraController!.startImageStream((CameraImage image) async {
       if (!_isCapturingFrames) return;
 
@@ -154,6 +162,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
       frameCount++;
       if (sw.elapsedMilliseconds > 3000 || frameCount >= maxFrames) {
+        // 3초가 지났거나 최대 프레임 수에 도달하면 스트림 중지
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
         sw.stop();
@@ -161,16 +170,16 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
     });
 
+    // 3초가 끝나기를 기다림
     await done.future;
 
-    setState(() { _resultText = '${frameList.length}장 캡처, 서버 전송 중...'; });
-
+    // 서버로 전송
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
-  // 이미지를 50장 한 번에 서버로 전송 (images[] multipart 필드)
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
-    final url = 'https://85f0-2001-2d8-2009-3f17-4dd8-85d2-3e65-404b.ngrok-free.app/check-sign';
+    final url =
+        'https://85f0-2001-2d8-2009-3f17-4dd8-85d2-3e65-404b.ngrok-free.app/check-sign';
     final uri = Uri.parse(url.trim());
 
     final storage = FlutterSecureStorage();
@@ -181,11 +190,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     var request = http.MultipartRequest('POST', uri);
 
-    // images key로 50장 한 번에 추가
+    // “images” 필드 이름으로 프레임을 한 번에 모두 추가
     for (int i = 0; i < frames.length; i++) {
       request.files.add(
         http.MultipartFile.fromBytes(
-          'images',  // 복수형 "images"!
+          'images',
           frames[i],
           filename: 'frame_$i.jpg',
           contentType: MediaType('image', 'jpeg'),
@@ -204,17 +213,30 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        setState(() {
-          _resultText = data['result'] ?? '인식 성공!';
-        });
+        final String result = data['result'] ?? '인식 성공!';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result)),
+          );
+        }
       } else {
-        setState(() {
-          _resultText = '서버 오류: ${response.body}';
-        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('서버 오류: ${response.body}')),
+          );
+        }
       }
     } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('네트워크 오류: $e')),
+        );
+      }
+    } finally {
+      // 한 문제당 한 번만 누르도록 상태 변경
       setState(() {
-        _resultText = '네트워크 오류: $e';
+        _hasSentFrames = true;
+        _isCapturingFrames = false;
       });
     }
   }
@@ -224,11 +246,11 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       setState(() {
         currentIndex--;
         _isLoading = true;
+        _hasSentFrames = false; // 이전 문제로 넘어가면 버튼 다시 활성화
       });
       await _initializeVideoIfNeeded();
       setState(() {
         _isLoading = false;
-        _resultText = '';
       });
     }
   }
@@ -247,7 +269,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     setState(() {
       currentIndex++;
       _isLoading = true;
-      _resultText = '';
+      _hasSentFrames = false; // 다음 문제로 넘어가면 버튼 다시 활성화
     });
     await _initializeVideoIfNeeded();
     setState(() {
@@ -377,9 +399,14 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       );
     }
 
+    // 현재 문제 문서에서 정보 가져오기
     final doc = _letters[currentIndex];
     final String letter = doc['question'] ?? '';
     final String imageUrl = doc['imageUrl'] ?? '';
+
+    // “진행률” 바가 들어있는 Padding: horizontal 16이므로, 전체 화면 너비 - 32가 진행률 바의 너비
+    // 따라서 “따라 해보세요” 박스도 같은 너비로 설정하기 위해 아래와 같이 계산
+    final double boxWidth = MediaQuery.of(context).size.width - 32;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -390,10 +417,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           title: Text(
             widget.category,
             style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                fontSize: 24
-            ),
+                fontWeight: FontWeight.bold, color: Colors.white, fontSize: 24),
           ),
           centerTitle: true,
           leading: IconButton(
@@ -407,6 +431,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // ── 진행률 표시 ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
               child: Column(
@@ -423,6 +448,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ],
               ),
             ),
+
+            // ── 카드: 따라하기 영상/이미지 ──
             Card(
               margin: const EdgeInsets.all(16),
               elevation: 4,
@@ -437,8 +464,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
+                    // 진행률 바와 동일한 너비로 설정
                     SizedBox(
-                      width: 200,
+                      width: boxWidth,
                       height: 200,
                       child: _isVideo(imageUrl)
                           ? (_videoController != null && _videoController!.value.isInitialized
@@ -466,18 +494,32 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ),
               ),
             ),
-            // 3초 연속 촬영(실시간 프레임 전송) 버튼
+
+            // ── 수어 인식 버튼 ──
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6.0),
               child: SizedBox(
                 width: 220,
                 height: 50,
                 child: ElevatedButton.icon(
-                  onPressed: _isCameraInitialized && !_isCapturingFrames
+                  onPressed: (!_isCapturingFrames && !_hasSentFrames)
                       ? _captureFramesAndSend
-                      : null,
+                      : null, // 인식 중이거나 완료된 뒤엔 비활성화
                   icon: const Icon(Icons.fiber_manual_record, color: Colors.white, size: 24),
-                  label: const Text('수어 인식 3초 연속', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  label: _isCapturingFrames
+                      ? const Text(
+                    '인식 중...',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  )
+                      : _hasSentFrames
+                      ? const Text(
+                    '완료',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  )
+                      : const Text(
+                    '수어 인식 3초 연속',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -485,12 +527,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 ),
               ),
             ),
-            if (_resultText.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(_resultText, style: const TextStyle(fontSize: 18, color: Colors.blue)),
-              ),
-            // 카메라 프리뷰
+
+            // ── 카메라 프리뷰 ──
             Container(
               width: 200,
               height: 200,
@@ -509,6 +547,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
               )
                   : const Center(child: CircularProgressIndicator()),
             ),
+
+            // ── 이전 / 다음 버튼 ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32.0),
               child: Row(
