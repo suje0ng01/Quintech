@@ -64,7 +64,9 @@ public class GameController {
                 "message", "게임 문제가 정상 출제되었습니다.",
                 "questions", questions
         ));
+
     }
+
 
     // ✅ GET /api/game/stats → Weekly 통계 제공
     @GetMapping("/stats")
