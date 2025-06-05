@@ -99,7 +99,7 @@ class _LearningPageState extends State<LearningPage> {
 
   List<Widget> _buildWordChapters() {
     List<String> categories = [
-      '주생활',
+      // '주생활',
       '동물',
       '사회생활',
       '삶',
