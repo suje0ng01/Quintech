@@ -85,7 +85,6 @@ class GameGuidePage extends StatelessWidget {
           Text('• 카메라가 사용자의 손 동작을 인식하여 \n   정답 여부를 판단합니다.'),
           Text('• 정확하게 수어를 표현하면 점수를 얻습니다.'),
           SizedBox(height: 4),
-          Text('• 정답률이 80% 이상이면 학습이 완료됩니다.', style: TextStyle(fontWeight: FontWeight.bold)),
 
           SizedBox(height: 16),
           Text('💡 팁'),
