@@ -373,6 +373,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
       );
     }
 
+    // ─── 수정된 부분 시작 ───
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -389,185 +390,199 @@ class _GameDetailPageState extends State<GameDetailPage> {
           },
         ),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // 정답수 & 진행률
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: (currentIndex + 1) / _questions.length,
-                      color: Colors.blue,
-                      backgroundColor: Colors.grey[300],
+      // Center를 제거하고 SingleChildScrollView를 최상위에 둔다
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // 정답수 & 진행률 영역 (맨 위에 고정)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+              child: Column(
+                children: [
+                  LinearProgressIndicator(
+                    value: (currentIndex + 1) / _questions.length,
+                    color: Colors.blue,
+                    backgroundColor: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${currentIndex + 1}/${_questions.length}'),
+                  const SizedBox(height: 8),
+                  Text(
+                    '정답 수: $correctCount / ${_questions.length}',
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(height: 4),
-                    Text('${currentIndex + 1}/${_questions.length}'),
-                    const SizedBox(height: 8),
-                    Text('정답 수: $correctCount / ${_questions.length}',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        )),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              if (contentType == "VOWEL" || contentType == "CONSONANT") ...[
-                // 기존 카메라 문제
-                Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
-                  elevation: 4,
-                  color: Colors.blueGrey[50],
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-                    child: Column(
-                      children: [
-                        const Text(
-                          '아래 적힌 단어를 손으로 표현해보세요',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: Container(
-                            width: mainBoxSize,
-                            constraints: const BoxConstraints(minHeight: 80),
-                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.blueAccent.shade100, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.07),
-                                  spreadRadius: 2,
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              question,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 36),
-                Center(
-                  child: Container(
-                    width: mainBoxSize,
-                    height: mainBoxSize,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black, width: 2),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: _isCameraInitialized && _cameraController != null
-                        ? ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: AspectRatio(
-                        aspectRatio: 1.0,
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width: _cameraController!.value.previewSize!.height,
-                            height: _cameraController!.value.previewSize!.width,
-                            child: CameraPreview(_cameraController!),
-                          ),
-                        ),
-                      ),
-                    )
-                        : const Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+            ),
+            const SizedBox(height: 8),
+
+            // VOWEL/CONSONANT 문제면 기존 카메라 타입 화면
+            if (contentType == "VOWEL" || contentType == "CONSONANT") ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+                elevation: 4,
+                color: Colors.blueGrey[50],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+                  child: Column(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward, size: 40),
-                        onPressed: _goToNext,
+                      const Text(
+                        '아래 적힌 단어를 손으로 표현해보세요',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: Container(
+                          width: mainBoxSize,
+                          constraints: const BoxConstraints(minHeight: 80),
+                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.blueAccent.shade100, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.07),
+                                spreadRadius: 2,
+                                blurRadius: 6,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            question,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ] else if (contentType == "WORD") ...[
-                // WORD 문제 (수어영상 or 이미지 + 입력폼)
-                Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
-                  elevation: 4,
-                  color: Colors.blueGrey[50],
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-                    child: Column(
-                      children: [
-                        const Text(
-                          '수어 영상을 보고 단어를 입력하세요',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                          textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 36),
+              Center(
+                child: Container(
+                  width: mainBoxSize,
+                  height: mainBoxSize,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black, width: 2),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: _isCameraInitialized && _cameraController != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: AspectRatio(
+                      aspectRatio: 1.0,
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _cameraController!.value.previewSize!.height,
+                          height: _cameraController!.value.previewSize!.width,
+                          child: CameraPreview(_cameraController!),
                         ),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: (videoUrl != null && videoUrl.isNotEmpty)
-                              ? isVideoUrl(videoUrl)
-                              ? AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: VideoPlayerWidget(url: videoUrl),
-                          )
-                              : Image.network(videoUrl, width: mainBoxSize, height: mainBoxSize * 0.7, fit: BoxFit.contain)
-                              : const Text('미디어 없음'),
-                        ),
-                        const SizedBox(height: 20),
-                        TextField(
-                          controller: _answerController,
-                          decoration: const InputDecoration(
-                            labelText: "정답을 입력하세요",
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _checkWordAnswer,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              "정답 확인",
-                              style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
+                  )
+                      : const Center(child: CircularProgressIndicator()),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_forward, size: 40),
+                      onPressed: _goToNext,
+                    ),
+                  ],
+                ),
+              ),
+            ]
+
+            // WORD 문제일 때
+            else if (contentType == "WORD") ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
+                elevation: 4,
+                color: Colors.blueGrey[50],
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
+                  child: Column(
+                    children: [
+                      const Text(
+                        '수어 영상을 보고 단어를 입력하세요',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: (videoUrl != null && videoUrl.isNotEmpty)
+                            ? isVideoUrl(videoUrl)
+                            ? AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: VideoPlayerWidget(url: videoUrl),
+                        )
+                            : Image.network(
+                          videoUrl,
+                          width: mainBoxSize,
+                          height: mainBoxSize * 0.7,
+                          fit: BoxFit.contain,
+                        )
+                            : const Text('미디어 없음'),
+                      ),
+                      const SizedBox(height: 20),
+                      TextField(
+                        controller: _answerController,
+                        decoration: const InputDecoration(
+                          labelText: "정답을 입력하세요",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _checkWordAnswer,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            "정답 확인",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ]
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );
+    // ─── 수정된 부분 끝 ───
   }
 }
 
