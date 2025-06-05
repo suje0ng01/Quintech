@@ -46,7 +46,8 @@ class _DictionaryPageState extends State<DictionaryPage> {
     List<String> categories = [
       '개념', '경제생활', '동물', '모음',
       '문화', '사회생활', '삶', '기타',
-      '자음', '주생활'
+      '자음',
+      // '주생활'
     ];
 
     List<Map<String, String>> allWords = [];
