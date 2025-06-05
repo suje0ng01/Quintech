@@ -59,7 +59,6 @@ class _LearningPageState extends State<LearningPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,7 +67,11 @@ class _LearningPageState extends State<LearningPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '학습',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
         ),
         centerTitle: true,
         leading: IconButton(
@@ -96,7 +99,16 @@ class _LearningPageState extends State<LearningPage> {
 
   List<Widget> _buildWordChapters() {
     List<String> categories = [
-      '식생활', '주생활', '동식물', '인간', '사회생활', '삶', '문화', '개념', '기타', '경제생활'
+      '식생활',
+      '주생활',
+      '동식물',
+      '인간',
+      '사회생활',
+      '삶',
+      '문화',
+      '개념',
+      '기타',
+      '경제생활'
     ];
 
     return categories.map((title) {
@@ -138,11 +150,16 @@ class _LearningPageState extends State<LearningPage> {
     }
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        // 상세 페이지로 이동하고, 돌아올 때까지 기다린다.
+        await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => LearningDetailPage(category: title)),
+          MaterialPageRoute(
+            builder: (_) => LearningDetailPage(category: title),
+          ),
         );
+        // 상세 페이지에서 뒤로 돌아오면, 최신 진행도를 다시 불러온다.
+        await fetchProgress();
       },
       child: Container(
         height: 60,
@@ -158,7 +175,10 @@ class _LearningPageState extends State<LearningPage> {
           children: [
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
             ),
             Container(
               height: 24,
