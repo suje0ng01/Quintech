@@ -22,8 +22,8 @@ const Map<String, String> korToEngCategory = {
   "문화":   "culture",
   "경제생활":   "economic",
   "기타":   "etc",
-  "삶":   "human",
-  "주생활":   "life",
+  "삶":   "life",
+  "인간":   "human",
   "사회생활":   "social",
   // 정적(자음/모음)은 한글 그대로 사용
   "자음":   "자음",
@@ -218,6 +218,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       // _countdown은 동적 모드 전용이므로 0으로 두거나 신경 쓰지 않아도 됨
     });
 
+    // ── 서버 전송 또는 시연용 시뮬레이션 호출 ──
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
@@ -272,18 +273,42 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     setState(() {
       _countdown = 0;
-      // 서버 응답 대기 시에도 true 유지 (필요시 UI에서 “인식 중...” 처리)
+      // 서버 응답 대기 시에도 true 유지 (필요 시 UI에서 “인식 중...” 처리)
       _isCapturingFrames = true;
     });
 
+    // ── 서버 전송 또는 시연용 시뮬레이션 호출 ──
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
   /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
 
+    // ── 4-1) “동물” 카테고리인 경우 → 시연용 가짜 응답 처리 ──
+    if (widget.category == "동물") {
+      // 1) 버튼에 “인식 중...” 상태 유지
+      setState(() {
+        _isCapturingFrames = true;
+        _hasSentFrames = false;
+      });
+
+      // 2) 약간의 딜레이를 두고 “연동 중...” 상태를 보여줌
+      await Future.delayed(const Duration(seconds: 2)); // 여기서 2초를 고정해 두었습니다.
+
+      // 3) 현재 인덱스(currentIndex)에 따라 가짜 결과 결정
+      //   - 첫 번째(인덱스 0)일 때: 틀림("X")
+      //   - 그 외(인덱스 1,2,3,4 …): 맞음("O")
+      final bool isCorrect = (currentIndex != 0);
+      final String fakeResult = isCorrect ? "O" : "X";
+
+      // 4) 결과 처리(팝업 띄우기 등) → _handleResult 내부에서 _isCapturingFrames=false로 전환
+      _handleResult(fakeResult);
+      return;
+    }
+
+    // ── 4-2) 그 외 카테고리(“자음”/“모음”/기타)는 기존 서버 연결 코드를 실행 ──
+    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
     final userId = await storage.read(key: 'user_id') ?? 'user123';
@@ -410,6 +435,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         ],
       ),
     );
+
+    // 결과를 받은 뒤 반드시 _isCapturingFrames=false로 바꿔야 버튼이 다시 활성화됨
     setState(() {
       _hasSentFrames = true;
       _isCapturingFrames = false;
@@ -503,6 +530,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         actions: [
           TextButton(
             onPressed: () async {
+              await _savePracticeResult();
+
               Navigator.of(ctx).pop();
               Navigator.pop(context);
             },
@@ -526,6 +555,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     if (category == "자음") return "CONSONANT";
     return "WORD";
   }
+
 
   /// 학습 결과 서버에 저장 (필요 시 호출)
   Future<void> _savePracticeResult() async {
@@ -703,7 +733,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 )
                     : _isCapturingFrames
                     ? const Text(
-                  '인식 중...',
+                  '연동 중...',  // “인식 중...”에서 “연동 중...”으로 변경하여 딜레이 시연 상태를 표시
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 )
                     : _hasSentFrames
