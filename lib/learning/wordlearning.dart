@@ -59,8 +59,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   int _countdown = 0; // (카운트다운은 동적 모드 전용)
 
   static const int MIN_FRAMES = 10; // 동적 처리 시 최소 필요 프레임 수
-  static const int MAX_FRAMES = 60; // 동적 모드에서 3초간 수집 가능한 최대
-  static const int STATIC_MAX = 5;  // 정적 모드(자음/모음)에서 수집할 이미지 수
+  static const int MAX_FRAMES = 60; // 동적 모드에서 3초간 최대 수집
+  static const int STATIC_MAX = 20; // 정적 모드(자음/모음)에서 수집할 이미지 수를 20으로 변경
 
   @override
   void initState() {
@@ -173,7 +173,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     }
   }
 
-  /// ── 2) 정적 모드: 이미지 5장만 캡처해서 서버로 전송 ────────────────────────
+  /// ── 2) 정적 모드: 이미지 20장만 캡처해서 서버로 전송 ────────────────────────
   Future<void> _captureStaticFrames() async {
     setState(() {
       _isCapturingFrames = true;
@@ -185,6 +185,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     await _cameraController!.startImageStream((CameraImage image) async {
       if (!_isCapturingFrames) return;
+
       try {
         if (image.format.group == ImageFormatGroup.bgra8888) {
           final jpgBytes = await _bgra8888ToJpeg(image);
@@ -194,12 +195,15 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       } catch (e) {
         print("정적 프레임 변환 실패: $e");
       }
+
+      // 20장 모이면 스트림 종료
       if (captured >= STATIC_MAX) {
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
       }
     });
 
+    // 스트림이 완전히 멈출 때까지 대기
     while (_isCapturingFrames) {
       await Future.delayed(const Duration(milliseconds: 50));
     }
@@ -208,6 +212,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       _hasSentFrames = false;
     });
 
+    // 서버 전송 호출
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
@@ -216,7 +221,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     setState(() {
       _isCapturingFrames = true;
       _hasSentFrames = false;
-      _countdown = 3;
+      _countdown = 3; // 3초 카운트다운 시작
     });
 
     List<Uint8List> frameList = [];
@@ -235,6 +240,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     _cameraController!.startImageStream((CameraImage image) async {
       if (!_isCapturingFrames) return;
+
       try {
         if (image.format.group == ImageFormatGroup.bgra8888) {
           final jpgBytes = await _bgra8888ToJpeg(image);
@@ -243,6 +249,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       } catch (e) {
         print("동적 프레임 변환 실패: $e");
       }
+
       frameCount++;
       if (sw.elapsedMilliseconds > 3000 || frameCount >= MAX_FRAMES) {
         _isCapturingFrames = false;
@@ -277,20 +284,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     var request = http.MultipartRequest('POST', uri);
 
     if (isStaticMode) {
-      if (frames.isNotEmpty) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'images',
-            frames.first,
-            filename: 'frame_static.jpg',
-            contentType: MediaType('image', 'jpeg'),
-          ),
-        );
-      }
-      request.fields['user_id']  = userId;
-      request.fields['category'] = widget.category;
-      request.fields['step']     = step;
-    } else {
+      // ── 정적 모드: 캡처한 20장 모두를 전송 ──
       for (int i = 0; i < frames.length; i++) {
         request.files.add(
           http.MultipartFile.fromBytes(
@@ -302,7 +296,22 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         );
       }
       request.fields['user_id']  = userId;
-      request.fields['category'] = engCategory;
+      request.fields['category'] = widget.category; // "자음" or "모음"
+      request.fields['step']     = step;
+    } else {
+      // ── 동적 모드: 모든 프레임 전송 ──
+      for (int i = 0; i < frames.length; i++) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'images',
+            frames[i],
+            filename: 'frame_$i.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          ),
+        );
+      }
+      request.fields['user_id']  = userId;
+      request.fields['category'] = engCategory; // "animal", "concept", ...
       request.fields['step']     = step;
     }
 
@@ -378,7 +387,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _goToNext();
+              _goToNext(); // 다음 문제로 이동
             },
             child: const Text('다음'),
           ),
