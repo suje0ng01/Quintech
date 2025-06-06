@@ -693,27 +693,48 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             ),
           ),
 
-          // ── 카메라 프리뷰 ──
-          Container(
-            width: 260,
-            height: 260,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black),
-              borderRadius: BorderRadius.circular(10),
+          // ── 카메라 프리뷰 + 양옆 버튼 ──
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 왼쪽 버튼: 이전
+                IconButton(
+                  icon: const Icon(Icons.arrow_left, size: 32),
+                  onPressed: currentIndex > 0 ? _goToPrevious : null,
+                ),
+
+                // 카메라 프리뷰 (크기 및 위치는 변경 없음)
+                Container(
+                  width: 260,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: _isCameraInitialized && _cameraController != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: AspectRatio(
+                      aspectRatio: _cameraController!.value.aspectRatio,
+                      child: CameraPreview(_cameraController!),
+                    ),
+                  )
+                      : const Center(child: CircularProgressIndicator()),
+                ),
+
+                // 오른쪽 버튼: 다음
+                IconButton(
+                  icon: const Icon(Icons.arrow_right, size: 32),
+                  onPressed: currentIndex < _letters.length - 1 ? _goToNext : null,
+                ),
+              ],
             ),
-            child: _isCameraInitialized && _cameraController != null
-                ? ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: AspectRatio(
-                aspectRatio: _cameraController!.value.aspectRatio,
-                child: CameraPreview(_cameraController!),
-              ),
-            )
-                : const Center(child: CircularProgressIndicator()),
           ),
 
-          // 이전/다음 버튼은 자동 처리되므로 UI에 따로 표시하지 않음.
+          // ── 여유 공간 ──
+          const SizedBox(height: 16),
         ],
       ),
     );
