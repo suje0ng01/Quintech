@@ -22,7 +22,7 @@ const Map<String, String> korToEngCategory = {
   "문화":   "culture",
   "경제생활":   "economic",
   "기타":   "etc",
-  "삶":   "life",
+  "삶":   "human",
   "인간":   "human",
   "사회생활":   "social",
   // 정적(자음/모음)은 한글 그대로 사용
@@ -165,7 +165,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     if (!_isCameraInitialized || _cameraController == null) return;
     if (_isCapturingFrames) return; // 중복 방지
 
-    // 정적(자음/모음) 모드라면 5장만 촬영
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
     if (isStaticMode) {
       await _captureStaticFrames();
@@ -179,16 +178,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     setState(() {
       _isCapturingFrames = true;
       _hasSentFrames = false;
-      // _countdown은 동적 모드 전용이므로 여기선 사용하지 않음
     });
 
     List<Uint8List> frameList = [];
     int captured = 0;
 
-    // 카메라 스트림을 시작하고, 첫 5개의 프레임을 모아 서브리스트로 저장
     await _cameraController!.startImageStream((CameraImage image) async {
       if (!_isCapturingFrames) return;
-
       try {
         if (image.format.group == ImageFormatGroup.bgra8888) {
           final jpgBytes = await _bgra8888ToJpeg(image);
@@ -198,27 +194,20 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       } catch (e) {
         print("정적 프레임 변환 실패: $e");
       }
-
-      // 5장 모이면 스트림 종료
       if (captured >= STATIC_MAX) {
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
       }
     });
 
-    // 이미지 스트림이 완전히 멈출 때까지 대기
     while (_isCapturingFrames) {
       await Future.delayed(const Duration(milliseconds: 50));
     }
 
-    print("정적 모드: 보낼 프레임 개수 = ${frameList.length}");
-
     setState(() {
       _hasSentFrames = false;
-      // _countdown은 동적 모드 전용이므로 0으로 두거나 신경 쓰지 않아도 됨
     });
 
-    // ── 서버 전송 또는 시연용 시뮬레이션 호출 ──
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
@@ -227,7 +216,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     setState(() {
       _isCapturingFrames = true;
       _hasSentFrames = false;
-      _countdown = 3; // 3초 카운트다운 시작
+      _countdown = 3;
     });
 
     List<Uint8List> frameList = [];
@@ -235,7 +224,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     final sw = Stopwatch()..start();
     final done = Completer<void>();
 
-    // 1초마다 카운트다운 UI 업데이트
     Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_countdown > 1) {
         setState(() => _countdown--);
@@ -247,7 +235,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     _cameraController!.startImageStream((CameraImage image) async {
       if (!_isCapturingFrames) return;
-
       try {
         if (image.format.group == ImageFormatGroup.bgra8888) {
           final jpgBytes = await _bgra8888ToJpeg(image);
@@ -256,10 +243,8 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       } catch (e) {
         print("동적 프레임 변환 실패: $e");
       }
-
       frameCount++;
       if (sw.elapsedMilliseconds > 3000 || frameCount >= MAX_FRAMES) {
-        // 3초가 지났거나 MAX_FRAMES 도달 시 스트림 중지
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
         sw.stop();
@@ -267,76 +252,45 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
     });
 
-    // 3초가 완전히 지나기를 기다림
     await done.future;
-    print("동적 모드: 보낼 프레임 개수 = ${frameList.length}");
 
     setState(() {
       _countdown = 0;
-      // 서버 응답 대기 시에도 true 유지 (필요 시 UI에서 “인식 중...” 처리)
       _isCapturingFrames = true;
     });
 
-    // ── 서버 전송 또는 시연용 시뮬레이션 호출 ──
     await _sendFramesToServerAllAtOnce(frameList);
   }
 
   /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
+    final String url = 'https://a745-2001-2d8-6981-e79e-99c0-fd3a-9a44-baba.ngrok-free.app/check-sign';
 
-    // ── 4-1) “동물” 카테고리인 경우 → 시연용 가짜 응답 처리 ──
-    if (widget.category == "동물") {
-      // 1) 버튼에 “인식 중...” 상태 유지
-      setState(() {
-        _isCapturingFrames = true;
-        _hasSentFrames = false;
-      });
-
-      // 2) 약간의 딜레이를 두고 “연동 중...” 상태를 보여줌
-      await Future.delayed(const Duration(seconds: 2)); // 여기서 2초를 고정해 두었습니다.
-
-      // 3) 현재 인덱스(currentIndex)에 따라 가짜 결과 결정
-      //   - 첫 번째(인덱스 0)일 때: 틀림("X")
-      //   - 그 외(인덱스 1,2,3,4 …): 맞음("O")
-      final bool isCorrect = (currentIndex != 0);
-      final String fakeResult = isCorrect ? "O" : "X";
-
-      // 4) 결과 처리(팝업 띄우기 등) → _handleResult 내부에서 _isCapturingFrames=false로 전환
-      _handleResult(fakeResult);
-      return;
-    }
-
-    // ── 4-2) 그 외 카테고리(“자음”/“모음”/기타)는 기존 서버 연결 코드를 실행 ──
-    final String url = 'https://ac47-2001-2d8-6a85-a461-8040-fa76-f29a-7844.ngrok-free.app/check-sign';
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
     final userId = await storage.read(key: 'user_id') ?? 'user123';
     final doc = _letters[currentIndex];
     final String step = doc['question'] ?? '기본';
 
-    // 동적 카테고리인 경우 한글 → 영어 매핑
     final String engCategory = korToEngCategory[widget.category] ?? widget.category;
-
     var request = http.MultipartRequest('POST', uri);
 
     if (isStaticMode) {
-      // ── 정적 모드: 최대 STATIC_MAX 장(=5장)까지 전송 ──
-      for (int i = 0; i < frames.length && i < STATIC_MAX; i++) {
+      if (frames.isNotEmpty) {
         request.files.add(
           http.MultipartFile.fromBytes(
             'images',
-            frames[i],
-            filename: 'frame_static_$i.jpg',
+            frames.first,
+            filename: 'frame_static.jpg',
             contentType: MediaType('image', 'jpeg'),
           ),
         );
       }
       request.fields['user_id']  = userId;
-      request.fields['category'] = widget.category; // "자음" or "모음"
+      request.fields['category'] = widget.category;
       request.fields['step']     = step;
     } else {
-      // ── 동적 모드: 'images' 키로 모든 프레임 전송 ──
       for (int i = 0; i < frames.length; i++) {
         request.files.add(
           http.MultipartFile.fromBytes(
@@ -348,29 +302,25 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         );
       }
       request.fields['user_id']  = userId;
-      request.fields['category'] = engCategory; // "animal", "concept", ...
+      request.fields['category'] = engCategory;
       request.fields['step']     = step;
     }
 
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      print('🚀 서버 응답: ${response.body}');
+
+      // 로그 콘솔에서만 확인 가능하도록 print 사용
+      print('🚀 서버 응답 (statusCode: ${response.statusCode}): ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final String status = data['status'] ?? '';
 
         if (status == 'success') {
-          if (isStaticMode) {
-            // 정적 모드일 때는 status==success만으로 정답 처리
-            _handleResult("O");
-          } else {
-            final String result = data['result'] ?? '';
-            _handleResult(result);
-          }
+          final String result = data['result'] ?? '';
+          _handleResult(result);
         } else if (status == 'waiting') {
-          // 동적 모드에서 MIN_FRAMES 미만일 때
           final int collected = data['frames_collected'] ?? 0;
           final int needed = data['needed'] ?? MIN_FRAMES;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -381,7 +331,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             _isCapturingFrames = false;
           });
         } else {
-          // 실패 케이스
           final String error = data['error'] ?? '알 수 없는 오류';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("예측 실패: $error")),
@@ -401,6 +350,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         });
       }
     } catch (e) {
+      print('네트워크 오류: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('네트워크 오류: $e')),
       );
@@ -428,15 +378,13 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _goToNext(); // 다음 문제로 이동
+              _goToNext();
             },
             child: const Text('다음'),
           ),
         ],
       ),
     );
-
-    // 결과를 받은 뒤 반드시 _isCapturingFrames=false로 바꿔야 버튼이 다시 활성화됨
     setState(() {
       _hasSentFrames = true;
       _isCapturingFrames = false;
@@ -444,7 +392,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
   }
 
-  /// 이전 문제로 이동 (필요 시 사용 가능)
   void _goToPrevious() async {
     if (currentIndex > 0) {
       setState(() {
@@ -460,7 +407,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     }
   }
 
-  /// 다음 문제로 이동
   void _goToNext() async {
     if (!_isAnswered[currentIndex]) {
       _isAnswered[currentIndex] = true;
@@ -486,7 +432,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     });
   }
 
-  /// 학습 완료/미달 다이얼로그
   void _showCompleteDialog({required bool passed}) {
     showDialog(
       context: context,
@@ -530,8 +475,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         actions: [
           TextButton(
             onPressed: () async {
-              await _savePracticeResult();
-
               Navigator.of(ctx).pop();
               Navigator.pop(context);
             },
@@ -549,15 +492,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     );
   }
 
-  /// ContentType 구분 (서버 저장용)
   String _getContentType(String category) {
     if (category == "모음") return "VOWEL";
     if (category == "자음") return "CONSONANT";
     return "WORD";
   }
 
-
-  /// 학습 결과 서버에 저장 (필요 시 호출)
   Future<void> _savePracticeResult() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
@@ -577,10 +517,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       "finishedAt": now,
     };
 
-    print('==== 서버에 보낼 데이터 ====');
-    print(jsonEncode(result));
-    print('=========================');
-
     final response = await http.post(
       Uri.parse('http://223.130.136.121:8082/api/practice/save'),
       headers: {
@@ -589,11 +525,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       },
       body: jsonEncode(result),
     );
-
-    print('==== 서버 응답 ====');
-    print('statusCode: ${response.statusCode}');
-    print('body: ${response.body}');
-    print('=================');
 
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -626,8 +557,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
 
     // “진행률” 바 너비 계산
     final double boxWidth = MediaQuery.of(context).size.width - 32;
-    // 카메라 프리뷰 크기 작게(스크롤 없이 보일 정도)
-    final double cameraSize = 260;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -635,6 +564,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         preferredSize: const Size.fromHeight(60),
         child: AppBar(
           backgroundColor: AppColors.appbarcolor,
+          centerTitle: true,
           title: Text(
             widget.category,
             style: const TextStyle(
@@ -643,7 +573,6 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
               fontSize: 24,
             ),
           ),
-          centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
             onPressed: () {
@@ -707,7 +636,9 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                         )
                             : null,
                       ),
-                      child: imageUrl.isEmpty ? const Center(child: Text('이미지 없음')) : null,
+                      child: imageUrl.isEmpty
+                          ? const Center(child: Text('이미지 없음'))
+                          : null,
                     ),
                   ),
                 ],
@@ -715,7 +646,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             ),
           ),
 
-          // ── 수어 인식 버튼 (크기 축소 및 앱바 색상 적용) ──
+          // ── 수어 인식 버튼 ──
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 6.0),
             child: SizedBox(
@@ -733,7 +664,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 )
                     : _isCapturingFrames
                     ? const Text(
-                  '연동 중...',  // “인식 중...”에서 “연동 중...”으로 변경하여 딜레이 시연 상태를 표시
+                  '인식 중...',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 )
                     : _hasSentFrames
@@ -742,7 +673,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 )
                     : const Text(
-                  '수어 인식',
+                  '수어 인식 시작',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -753,10 +684,10 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             ),
           ),
 
-          // ── 카메라 프리뷰 (크기 260×260) ──
+          // ── 카메라 프리뷰 ──
           Container(
-            width: cameraSize,
-            height: cameraSize,
+            width: 260,
+            height: 260,
             margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.black),
