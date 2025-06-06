@@ -1,3 +1,5 @@
+![Visitor Count](https://visitor-badge.laobi.icu/badge?page_id=bbbbs17.Quintech)
+
 # 🧠 HandTalk - 딥러닝 기반 수어 학습 어플리케이션 개발 (백엔드)
 
 수어(수화)를 기반으로 한 커뮤니케이션 플랫폼의 **백엔드 REST API 서버**입니다.  
