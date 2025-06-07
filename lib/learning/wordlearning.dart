@@ -484,6 +484,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         actions: [
           TextButton(
             onPressed: () async {
+              await _savePracticeResult();   // ⭐ 여기 저장 추가
               Navigator.of(ctx).pop();
               Navigator.pop(context);
             },
