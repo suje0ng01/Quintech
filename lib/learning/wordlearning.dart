@@ -59,7 +59,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   int _countdown = 0; // (카운트다운은 동적 모드 전용)
 
   static const int MIN_FRAMES = 10; // 동적 처리 시 최소 필요 프레임 수
-  static const int MAX_FRAMES = 60; // 동적 모드에서 3초간 최대 수집
+  static const int MAX_FRAMES = 200; // 동적 모드에서 10초간 최대 수집
   static const int STATIC_MAX = 20; // 정적 모드(자음/모음)에서 수집할 이미지 수를 20으로 변경
 
   @override
@@ -221,7 +221,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     setState(() {
       _isCapturingFrames = true;
       _hasSentFrames = false;
-      _countdown = 3; // 3초 카운트다운 시작
+      _countdown = 10; // 10초 카운트다운 시작
     });
 
     List<Uint8List> frameList = [];
@@ -251,7 +251,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       }
 
       frameCount++;
-      if (sw.elapsedMilliseconds > 3000 || frameCount >= MAX_FRAMES) {
+      if (sw.elapsedMilliseconds > 10000 || frameCount >= MAX_FRAMES) {
         _isCapturingFrames = false;
         await _cameraController!.stopImageStream();
         sw.stop();
@@ -272,7 +272,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://a745-2001-2d8-6981-e79e-99c0-fd3a-9a44-baba.ngrok-free.app/check-sign';
+    final String url = 'https://dd12-2001-2d8-698a-8365-d1b7-a990-2b6b-9c90.ngrok-free.app/check-sign';
 
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
