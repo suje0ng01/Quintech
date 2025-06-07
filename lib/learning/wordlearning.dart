@@ -373,7 +373,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   /// ── 5) 서버 응답 처리: O/X 다이얼로그 ───────────────────────────────────
   void _handleResult(String result) {
     final bool isCorrect = result == 'O';
-    if (isCorrect) correctCount++;
+
+    // ⭐ 정답이면서 처음 푼 문제만 correctCount 증가
+    if (isCorrect && !_isAnswered[currentIndex]) {
+      correctCount++;
+      _isAnswered[currentIndex] = true;   // 여기서도 true 처리해줘야 안전
+    }
 
     showDialog(
       barrierDismissible: false,
@@ -394,12 +399,14 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
         ],
       ),
     );
+
     setState(() {
       _hasSentFrames = true;
       _isCapturingFrames = false;
       _countdown = 0;
     });
   }
+
 
   void _goToPrevious() async {
     if (currentIndex > 0) {
