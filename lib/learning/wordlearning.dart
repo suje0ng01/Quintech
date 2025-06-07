@@ -339,16 +339,38 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             _hasSentFrames = false;
             _isCapturingFrames = false;
           });
-        } else {
+        } else if (status == 'fail') {
           final String error = data['error'] ?? '알 수 없는 오류';
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("예측 실패: $error")),
+          // ⭐ 손 인식 실패 시 팝업 추가
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('인식 실패'),
+              content: const Text('손이 잘 인식되지 않았어요.\n손을 화면에 잘 보이게 해주세요.\n다시 시도해 주세요.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                  },
+                  child: const Text(
+                    '확인',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
+
           setState(() {
             _hasSentFrames = false;
             _isCapturingFrames = false;
           });
         }
+
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('서버 오류: ${response.body}')),
