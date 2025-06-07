@@ -272,7 +272,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://dd12-2001-2d8-698a-8365-d1b7-a990-2b6b-9c90.ngrok-free.app/check-sign';
+    final String url = 'https://7345-2001-2d8-698a-8365-d1b7-a990-2b6b-9c90.ngrok-free.app/check-sign';
 
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
@@ -316,10 +316,10 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
     }
 
     try {
-      final streamedResponse = await request.send();
+      // ⭐ 타임아웃 추가 (15초)
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
       final response = await http.Response.fromStream(streamedResponse);
 
-      // 로그 콘솔에서만 확인 가능하도록 print 사용
       print('🚀 서버 응답 (statusCode: ${response.statusCode}): ${response.body}');
 
       if (response.statusCode == 200) {
@@ -358,6 +358,36 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
           _isCapturingFrames = false;
         });
       }
+    } on TimeoutException {
+      print('⏳ 서버 응답 시간 초과');
+      setState(() {
+        _hasSentFrames = false;
+        _isCapturingFrames = false;
+      });
+
+      // ⭐ 타임아웃 팝업 추가
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('응답 지연'),
+          content: const Text('서버 응답이 지연되고 있습니다.\n다시 시도해 주세요.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: const Text(
+                '확인',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       print('네트워크 오류: $e');
       ScaffoldMessenger.of(context).showSnackBar(
