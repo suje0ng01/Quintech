@@ -461,6 +461,12 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
               ),
+              const SizedBox(height: 10),
+              const Text(
+                '학습 결과를 저장하시겠습니까?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+              ),
             ] else ...[
               const Text(
                 '아쉽게도 정답률이 80% 미만입니다.\n다시 학습해 주세요.',
@@ -480,18 +486,48 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
             ),
           ],
         ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
+        actionsAlignment: passed ? MainAxisAlignment.end : MainAxisAlignment.center, // ⭐ 여기!
+        actions: passed
+            ? [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // 저장 안하고 닫기
+              Navigator.pop(context);
+            },
+            child: const Text(
+              '저장 안함',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ),
           TextButton(
             onPressed: () async {
-              await _savePracticeResult();   // ⭐ 여기 저장 추가
+              await _savePracticeResult(); // 저장 호출
+              Navigator.of(ctx).pop();
+              Navigator.pop(context);
+            },
+            child: const Text(
+              '저장하기',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.blue,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ]
+            : [
+          TextButton(
+            onPressed: () {
               Navigator.of(ctx).pop();
               Navigator.pop(context);
             },
             child: const Text(
               '확인',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 color: Colors.blue,
                 fontWeight: FontWeight.bold,
               ),
@@ -501,6 +537,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
       ),
     );
   }
+
 
   String _getContentType(String category) {
     if (category == "모음") return "VOWEL";
