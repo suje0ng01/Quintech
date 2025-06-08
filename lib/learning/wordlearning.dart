@@ -272,7 +272,7 @@ class _LearningDetailPageState extends State<LearningDetailPage> {
   /// ── 4) 서버로 이미지 전송 (정적/동적 공통) ──────────────────────────────
   Future<void> _sendFramesToServerAllAtOnce(List<Uint8List> frames) async {
     final bool isStaticMode = (widget.category == "자음" || widget.category == "모음");
-    final String url = 'https://7345-2001-2d8-698a-8365-d1b7-a990-2b6b-9c90.ngrok-free.app/check-sign';
+    final String url = 'https://2143-218-147-145-10.ngrok-free.app/check-sign';
 
     final uri = Uri.parse(url);
     final storage = FlutterSecureStorage();
