@@ -1,7 +1,5 @@
 // lib/pages/game_word_question_view.dart
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:quintech/game/video_playerwidget.dart' show VideoPlayerWidget;
 
 class WordQuestionView extends StatelessWidget {
@@ -75,7 +73,7 @@ class WordQuestionView extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () {
                 final userInput = answerController.text.trim();
-                // 입력값이 비어 있으면 경고 다이얼로그 띄우기
+                // ① 입력값이 비어 있으면 경고 다이얼로그
                 if (userInput.isEmpty) {
                   showDialog(
                     context: context,
@@ -92,13 +90,46 @@ class WordQuestionView extends StatelessWidget {
                   );
                   return;
                 }
-                // 입력이 있을 때만 정답/오답 판정
-                final correctAnswer =
-                question.trim().toLowerCase();
+
+                final correctAnswer = question.trim().toLowerCase();
+                // ② 정답일 때
                 if (userInput.toLowerCase() == correctAnswer) {
-                  onAnswerCorrect();
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('🎉 정답입니다!'),
+                      content: const Text('정답을 맞추셨습니다.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            onAnswerCorrect(); // 정답 콜백 호출 (correctCount +1)
+                          },
+                          child: const Text('다음'),
+                        ),
+                      ],
+                    ),
+                  );
                 } else {
-                  onAnswerIncorrect();
+                  // ③ 오답일 때
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('❌ 오답입니다'),
+                      content: const Text('아쉽게도 틀렸습니다.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            onAnswerIncorrect(); // 오답 콜백 호출 (correctCount 증가 안 함)
+                          },
+                          child: const Text('다음'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
