@@ -9,7 +9,7 @@ class VowelConsonantView extends StatelessWidget {
   final bool isRecognizing;
   final bool hasRecognized;
   final VoidCallback onRecognize;
-  final VoidCallback onNext;
+  final VoidCallback onNext; // 전달은 되지만 버튼에서 사용 X
 
   const VowelConsonantView({
     Key? key,
@@ -26,7 +26,6 @@ class VowelConsonantView extends StatelessWidget {
   Widget build(BuildContext context) {
     final question = questionData['question'] as String? ?? '';
     final screenWidth = MediaQuery.of(context).size.width;
-    // mainBoxSize는 double로 고정
     final mainBoxSize = screenWidth * 0.8 > 400.0 ? 400.0 : screenWidth * 0.8;
 
     return Padding(
@@ -109,24 +108,24 @@ class VowelConsonantView extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // 다음 문제 버튼
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onNext,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
-              child: const Text(
-                '다음 문제',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
+          // "다음 문제" 버튼 제거됨 → 아래 부분 삭제
+          // SizedBox(
+          //   width: double.infinity,
+          //   child: ElevatedButton(
+          //     onPressed: onNext,
+          //     style: ElevatedButton.styleFrom(
+          //       backgroundColor: Colors.blueAccent,
+          //       padding: const EdgeInsets.symmetric(vertical: 16.0),
+          //       shape: RoundedRectangleBorder(
+          //         borderRadius: BorderRadius.circular(10.0),
+          //       ),
+          //     ),
+          //     child: const Text(
+          //       '다음 문제',
+          //       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

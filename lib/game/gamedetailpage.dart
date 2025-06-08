@@ -136,7 +136,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
       await Future.delayed(const Duration(milliseconds: 50));
     }
 
-    final uri = Uri.parse('https://5d9c-2001-2d8-6a80-efb7-b99f-498d-41fe-914f.ngrok-free.app/check-quiz');
+    final uri = Uri.parse('https://d88b-2001-2d8-6a82-b3e-a14e-8b4b-5551-a6f8.ngrok-free.app/check-quiz');
     final userId = await FlutterSecureStorage().read(key: 'user_id') ?? '';
     final step = _questions[currentIndex]['question'] as String;
 
@@ -159,6 +159,13 @@ class _GameDetailPageState extends State<GameDetailPage> {
       final streamed = await req.send().timeout(const Duration(seconds: 15));
       final resp = await http.Response.fromStream(streamed);
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
+
+      print('==== 서버 응답 ====');
+      print('statusCode: ${resp.statusCode}');
+      print('body: ${resp.body}');
+      print('data: $data');
+      print('==================');
+
       final bool ok = data['status'] == 'success' && data['result'] == 'O';
 
       showDialog(
@@ -319,7 +326,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
                     isRecognizing: _isCapturingFrames,
                     hasRecognized: _hasSentFrames,
                     onRecognize: _recognizeQuiz,
-                    onNext: _goToNext,
+                    onNext: _goToNext, // VowelConsonantView에서 제거됨
                   );
                 }
               },
