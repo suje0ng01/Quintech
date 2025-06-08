@@ -139,7 +139,9 @@ class _GameDetailPageState extends State<GameDetailPage> {
     final uri = Uri.parse('https://2143-218-147-145-10.ngrok-free.app/check-quiz');
     final userId = await FlutterSecureStorage().read(key: 'user_id') ?? '';
     final step = _questions[currentIndex]['question'] as String;
-    final category = _questions[currentIndex]['contentType'] as String;
+
+    // ✅ category 를 소문자로 변환
+    final category = (_questions[currentIndex]['contentType'] as String).toLowerCase();
 
     // 🔥 서버에 넘기는 값 로그 출력
     print('==== 서버에 전송하는 값 ====');
@@ -208,6 +210,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
       });
     }
   }
+
 
   void _goToNext() {
     if (!_isAnswered[currentIndex]) _isAnswered[currentIndex] = true;
