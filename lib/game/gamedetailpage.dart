@@ -136,13 +136,22 @@ class _GameDetailPageState extends State<GameDetailPage> {
       await Future.delayed(const Duration(milliseconds: 50));
     }
 
-    final uri = Uri.parse('https://d88b-2001-2d8-6a82-b3e-a14e-8b4b-5551-a6f8.ngrok-free.app/check-quiz');
+    final uri = Uri.parse('https://2143-218-147-145-10.ngrok-free.app/check-quiz');
     final userId = await FlutterSecureStorage().read(key: 'user_id') ?? '';
     final step = _questions[currentIndex]['question'] as String;
+    final category = _questions[currentIndex]['contentType'] as String;
+
+    // 🔥 서버에 넘기는 값 로그 출력
+    print('==== 서버에 전송하는 값 ====');
+    print('user_id: $userId');
+    print('category: $category');
+    print('step: $step');
+    print('프레임 개수: ${frames.length}');
+    print('==========================');
 
     var req = http.MultipartRequest('POST', uri)
       ..fields['user_id'] = userId
-      ..fields['category'] = _questions[currentIndex]['contentType'] as String
+      ..fields['category'] = category
       ..fields['step'] = step;
     for (int i = 0; i < frames.length; i++) {
       req.files.add(
@@ -160,6 +169,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
       final resp = await http.Response.fromStream(streamed);
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
 
+      // 🔥 서버 응답 값 로그 출력
       print('==== 서버 응답 ====');
       print('statusCode: ${resp.statusCode}');
       print('body: ${resp.body}');
