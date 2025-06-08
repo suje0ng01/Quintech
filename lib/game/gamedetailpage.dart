@@ -3,9 +3,12 @@ import 'package:camera/camera.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:video_player/video_player.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:quintech/game/vowel_Consonant.dart';
+import 'package:quintech/game/word_question.dart';
+
 import '../constants/constants.dart';
+import '../constants/widget.dart'; // AppColors 사용 (기존대로)
 
 class GameDetailPage extends StatefulWidget {
   const GameDetailPage({Key? key}) : super(key: key);
@@ -27,7 +30,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
   final TextEditingController _answerController = TextEditingController();
   List<bool> _isAnswered = [];
 
-  // WORD 문제 영상 개별 로딩용
   bool _isWordVideoLoading = false;
 
   @override
@@ -44,33 +46,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
     super.dispose();
   }
 
-  // 비디오인지 체크
-  bool isVideoUrl(String? url) {
-    if (url == null) return false;
-    final lowerUrl = url.toLowerCase();
-    final path = lowerUrl.split('?').first; // ?파라미터 제거
-    return path.endsWith('.mp4') || path.endsWith('.mov');
-  }
-
-  // 🔹 Firestore에서 영상 URL 찾기
-  Future<String?> fetchSignVideoUrl(String category, String word) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('learningdata')
-          .doc('category')
-          .collection(category)
-          .doc(word)
-          .get();
-      if (snapshot.exists && snapshot.data() != null) {
-        return snapshot.data()!['imageUrl'] as String?;
-      }
-    } catch (e) {
-      print('파이어베이스 에러: $e');
-    }
-    return null;
-  }
-
-  // 🔹 서버 문제 받아오기만 (영상 X)
   Future<void> fetchQuestions() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
@@ -89,7 +64,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
     if (response.statusCode == 200) {
       final Map<String, dynamic> body = jsonDecode(utf8.decode(response.bodyBytes));
       final List<dynamic> questions = body['questions'];
-      print('서버에서 받아온 문제: $questions'); // 어떤 문제 나오는지 콘솔 출력
 
       setState(() {
         _questions = List<Map<String, dynamic>>.from(questions);
@@ -123,6 +97,23 @@ class _GameDetailPageState extends State<GameDetailPage> {
     });
   }
 
+  Future<String?> fetchSignVideoUrl(String category, String word) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('learningdata')
+          .doc('category')
+          .collection(category)
+          .doc(word)
+          .get();
+      if (snapshot.exists && snapshot.data() != null) {
+        return snapshot.data()!['imageUrl'] as String?;
+      }
+    } catch (e) {
+      print('파이어베이스 에러: $e');
+    }
+    return null;
+  }
+
   void _goToNext() {
     if (!_isAnswered[currentIndex]) {
       setState(() {
@@ -143,77 +134,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
     }
   }
 
-  void _checkWordAnswer() {
-    final userInput = _answerController.text.trim();
-    final correctAnswer = _questions[currentIndex]['question']?.trim();
-
-    if (userInput == correctAnswer) {
-      if (!_isAnswered[currentIndex]) {
-        setState(() {
-          correctCount++;
-          _isAnswered[currentIndex] = true;
-        });
-      }
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('정답입니다!', textAlign: TextAlign.center),
-          content: const Text('잘했어요! 다음 문제로 넘어갑니다.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                if (currentIndex == _questions.length - 1) {
-                  _savePracticeResult();
-                  _showCompleteDialog();
-                } else {
-                  setState(() {
-                    currentIndex++;
-                    _answerController.clear();
-                    _isWordVideoLoading = false;
-                  });
-                }
-              },
-              child: const Text('다음 문제'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      // 틀린 경우
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: Colors.white,
-          title: const Text('틀렸습니다', textAlign: TextAlign.center),
-          content: const Text('아쉽지만 다음 문제로 넘어갑니다.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                if (currentIndex == _questions.length - 1) {
-                  _savePracticeResult();
-                  _showCompleteDialog();
-                } else {
-                  setState(() {
-                    currentIndex++;
-                    _answerController.clear();
-                    _isWordVideoLoading = false;
-                  });
-                }
-              },
-              child: const Text('다음 문제'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  Future<void> _savePracticeResult() async {
+  void _savePracticeResult() async {
     final storage = FlutterSecureStorage();
     final jwt = await storage.read(key: 'jwt_token');
     if (jwt == null) {
@@ -302,7 +223,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      // “게임 문제 생성중...” 안내!
       return const Scaffold(
         body: Center(
           child: Column(
@@ -329,11 +249,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
     String? videoUrl = q['videoUrl'];
     final String? category = q['topic'];
 
-    final double mainBoxSize = MediaQuery.of(context).size.width * 0.8 > 400
-        ? 400
-        : MediaQuery.of(context).size.width * 0.8;
-
-    // WORD 문제면서 영상 URL이 아직 없으면 개별로딩
     if (contentType == "WORD" && (videoUrl == null || videoUrl.isEmpty)) {
       if (!_isWordVideoLoading) {
         _isWordVideoLoading = true;
@@ -350,7 +265,7 @@ class _GameDetailPageState extends State<GameDetailPage> {
           }
         });
       }
-      // WORD 문제 영상 로딩중 안내
+
       return Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -375,7 +290,6 @@ class _GameDetailPageState extends State<GameDetailPage> {
       );
     }
 
-    // ─── 수정된 부분 시작 ───
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -387,241 +301,42 @@ class _GameDetailPageState extends State<GameDetailPage> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      // Center를 제거하고 SingleChildScrollView를 최상위에 둔다
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // 정답수 & 진행률 영역 (맨 위에 고정)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-              child: Column(
-                children: [
-                  LinearProgressIndicator(
-                    value: (currentIndex + 1) / _questions.length,
-                    color: Colors.blue,
-                    backgroundColor: Colors.grey[300],
-                  ),
-                  const SizedBox(height: 4),
-                  Text('${currentIndex + 1}/${_questions.length}'),
-                  const SizedBox(height: 8),
-                  Text(
-                    '정답 수: $correctCount / ${_questions.length}',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+      body: Column(
+        children: [
+          CorrectCounter(
+            currentIndex: currentIndex,
+            questions: _questions,
+            correctCount: correctCount,
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: Builder(
+              builder: (context) {
+                if (contentType == 'WORD') {
+                  return WordQuestionView(
+                    questionData: q,
+                    answerController: _answerController,
+                    onAnswerCorrect: _goToNext,
+                    onAnswerIncorrect: _goToNext,
+                  );
+                } else if (contentType == 'VOWEL' || contentType == 'CONSONANT') {
+                  return VowelConsonantView(
+                    questionData: q,
+                    cameraController: _cameraController,
+                    isCameraInitialized: _isCameraInitialized,
+                    onNext: _goToNext,
+                  );
+                } else {
+                  return const Center(child: Text('알 수 없는 문제 유형입니다.'));
+                }
+              },
             ),
-            const SizedBox(height: 8),
-
-            // VOWEL/CONSONANT 문제면 기존 카메라 타입 화면
-            if (contentType == "VOWEL" || contentType == "CONSONANT") ...[
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
-                elevation: 4,
-                color: Colors.blueGrey[50],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-                  child: Column(
-                    children: [
-                      const Text(
-                        '아래 적힌 단어를 손으로 표현해보세요',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: Container(
-                          width: mainBoxSize,
-                          constraints: const BoxConstraints(minHeight: 80),
-                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.blueAccent.shade100, width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.grey.withOpacity(0.07),
-                                spreadRadius: 2,
-                                blurRadius: 6,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            question,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 36),
-              Center(
-                child: Container(
-                  width: mainBoxSize,
-                  height: mainBoxSize,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black, width: 2),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: _isCameraInitialized && _cameraController != null
-                      ? ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: AspectRatio(
-                      aspectRatio: 1.0,
-                      child: FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: _cameraController!.value.previewSize!.height,
-                          height: _cameraController!.value.previewSize!.width,
-                          child: CameraPreview(_cameraController!),
-                        ),
-                      ),
-                    ),
-                  )
-                      : const Center(child: CircularProgressIndicator()),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_forward, size: 40),
-                      onPressed: _goToNext,
-                    ),
-                  ],
-                ),
-              ),
-            ]
-
-            // WORD 문제일 때
-            else if (contentType == "WORD") ...[
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
-                elevation: 4,
-                color: Colors.blueGrey[50],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-                  child: Column(
-                    children: [
-                      const Text(
-                        '수어 영상을 보고 단어를 입력하세요',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: (videoUrl != null && videoUrl.isNotEmpty)
-                            ? isVideoUrl(videoUrl)
-                            ? AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: VideoPlayerWidget(url: videoUrl),
-                        )
-                            : Image.network(
-                          videoUrl,
-                          width: mainBoxSize,
-                          height: mainBoxSize * 0.7,
-                          fit: BoxFit.contain,
-                        )
-                            : const Text('미디어 없음'),
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _answerController,
-                        decoration: const InputDecoration(
-                          labelText: "정답을 입력하세요",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _checkWordAnswer,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            "정답 확인",
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
-    // ─── 수정된 부분 끝 ───
-  }
-}
-
-// 비디오 위젯 (video_player 패키지 필요)
-class VideoPlayerWidget extends StatefulWidget {
-  final String url;
-  const VideoPlayerWidget({required this.url, Key? key}) : super(key: key);
-  @override
-  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
-}
-
-class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
-  late VideoPlayerController _controller;
-  bool _initialized = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.network(widget.url)
-      ..initialize().then((_) {
-        setState(() {
-          _initialized = true;
-        });
-        _controller.play();
-        _controller.setLooping(true);
-      });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_initialized) return const Center(child: CircularProgressIndicator());
-    return VideoPlayer(_controller);
   }
 }
