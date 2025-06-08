@@ -219,6 +219,39 @@ class _GameDetailPageState extends State<GameDetailPage> {
       ),
     );
   }
+  // GameDetailPage 내부에 추가
+  void _handleCorrect() {
+    if (!_isAnswered[currentIndex]) {
+      setState(() {
+        correctCount++;
+        _isAnswered[currentIndex] = true;
+      });
+    }
+    _goToNextQuestion();
+  }
+
+  void _handleIncorrect() {
+    if (!_isAnswered[currentIndex]) {
+      setState(() {
+        _isAnswered[currentIndex] = true;
+      });
+    }
+    _goToNextQuestion();
+  }
+
+  void _goToNextQuestion() {
+    if (currentIndex == _questions.length - 1) {
+      _savePracticeResult();
+      _showCompleteDialog();
+    } else {
+      setState(() {
+        currentIndex++;
+        _answerController.clear();
+        _isWordVideoLoading = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -319,8 +352,8 @@ class _GameDetailPageState extends State<GameDetailPage> {
                   return WordQuestionView(
                     questionData: q,
                     answerController: _answerController,
-                    onAnswerCorrect: _goToNext,
-                    onAnswerIncorrect: _goToNext,
+                    onAnswerCorrect: _handleCorrect,   // 정답일 때만 correctCount 증가
+                    onAnswerIncorrect: _handleIncorrect, // 오답일 땐 증가 없이 넘어감
                   );
                 } else if (contentType == 'VOWEL' || contentType == 'CONSONANT') {
                   return VowelConsonantView(
