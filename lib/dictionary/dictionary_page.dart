@@ -44,9 +44,9 @@ class _DictionaryPageState extends State<DictionaryPage> {
 
   Future<void> fetchWordsFromFirebase() async {
     List<String> categories = [
-      '개념', '경제생활', '기타', '동식물', '모음',
-      '문화', '사회생활', '삶', '식생활', '인간',
-      '자음', '주생활'
+      '개념', '경제생활', '동물', '모음',
+      '문화', '사회생활', '삶', '기타',
+      '자음', '인간'
     ];
 
     List<Map<String, String>> allWords = [];
@@ -105,7 +105,7 @@ class _DictionaryPageState extends State<DictionaryPage> {
           centerTitle: true,
           title: const Text(
             '단어장',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold,fontSize: 24),
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),

@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:quintech/constants/constants.dart';
 import 'package:quintech/main.dart';
 import '../member/login.dart';
@@ -19,38 +16,7 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-Future<Map<String, dynamic>?> fetchUserDataFromFirestore() async {
-  final currentUser = FirebaseAuth.instance.currentUser;
-  if (currentUser == null) return null;
-
-  final doc = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(currentUser.uid)
-      .get();
-
-  if (doc.exists) {
-    return doc.data();
-  } else {
-    return null;
-  }
-}
-
 class _SettingsPageState extends State<SettingsPage> {
-  Map<String, dynamic>? userData;
-
-  @override
-  void initState() {
-    super.initState();
-    loadUserData();
-  }
-
-  Future<void> loadUserData() async {
-    final data = await fetchUserDataFromFirestore();
-    setState(() {
-      userData = data;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = Provider.of<LoginState>(context).isLoggedIn;
@@ -60,13 +26,13 @@ class _SettingsPageState extends State<SettingsPage> {
         backgroundColor: AppColors.appbarcolor,
         title: const Text(
           '설정',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24),
         ),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.home, color: Colors.black),
           onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
           },
         ),
       ),
@@ -76,11 +42,35 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildListTile(
               '로그아웃',
               Icons.logout,
-                  () {
-                final loginState = Provider.of<LoginState>(context, listen: false);
-                loginState.logOut();
+                  () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: Colors.white,
+                    title: const Text('로그아웃'),
+                    content: const Text('정말 로그아웃 하시겠습니까?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('취소'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('확인'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  final loginState = Provider.of<LoginState>(context, listen: false);
+                  loginState.logOut();
+                  Navigator.pop(context); // <-- 현재 페이지(SettingsPage) 닫고 홈으로 돌아감
+
+                }
               },
             ),
+
             _buildListTile('회원 정보', Icons.person, () {
               Navigator.push(
                 context,
@@ -89,6 +79,7 @@ class _SettingsPageState extends State<SettingsPage> {
             }),
           ] else ...[
             _buildListTile('로그인/회원가입', Icons.login, () {
+              Navigator.pop(context); // <-- 현재 페이지(SettingsPage) 닫고 홈으로 돌아감
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => LoginPage()),

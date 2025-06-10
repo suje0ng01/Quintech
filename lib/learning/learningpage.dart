@@ -1,9 +1,63 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:quintech/learning/wordlearning.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/constants.dart';
+import 'wordlearning.dart';
 
-class LearningPage extends StatelessWidget {
+class LearningPage extends StatefulWidget {
   const LearningPage({Key? key}) : super(key: key);
+
+  @override
+  State<LearningPage> createState() => _LearningPageState();
+}
+
+class _LearningPageState extends State<LearningPage> {
+  final storage = FlutterSecureStorage();
+
+  Map<String, bool> wordProgress = {};
+  bool consonantProgress = false;
+  bool vowelProgress = false;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchProgress();
+  }
+
+  Future<void> fetchProgress() async {
+    final jwt = await storage.read(key: 'jwt_token');
+
+    if (jwt == null || jwt.isEmpty) {
+      print('❌ JWT 토큰이 없습니다.');
+      setState(() => isLoading = false);
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse('http://223.130.136.121:8082/api/practice/progress'),
+      headers: {
+        'Authorization': 'Bearer $jwt',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      setState(() {
+        consonantProgress = data['consonantVowelProgress']['consonant'];
+        vowelProgress = data['consonantVowelProgress']['vowel'];
+        wordProgress = Map<String, bool>.from(data['wordProgress']);
+        isLoading = false;
+      });
+    } else {
+      print('API 오류: ${response.statusCode}');
+      print('응답 본문: ${response.body}');
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,34 +76,43 @@ class LearningPage extends StatelessWidget {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_outlined, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildInfoBox(),
             const SizedBox(height: 20),
-            _buildChapterCard(context, '모음', 0.0),
-            _buildChapterCard(context, '자음', 0.3),
-            _buildChapterCard(context, '식생활', 1.0),
-            _buildChapterCard(context, '주생활', 0.0),
-            _buildChapterCard(context, '동식물', 0.0),
-            _buildChapterCard(context, '인간', 0.0),
-            _buildChapterCard(context, '사회생활', 0.0),
-            _buildChapterCard(context, '삶', 0.0),
-            _buildChapterCard(context, '문화', 0.0),
-            _buildChapterCard(context, '개념', 0.0),
-            _buildChapterCard(context, '기타', 0.0),
-            _buildChapterCard(context, '경제생활', 0.0),
+            _buildChapterCard(context, '모음', vowelProgress),
+            _buildChapterCard(context, '자음', consonantProgress),
+            ..._buildWordChapters(),
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _buildWordChapters() {
+    List<String> categories = [
+      '인간',
+      '동물',
+      '사회생활',
+      '삶',
+      '문화',
+      '개념',
+      '기타',
+      '경제생활'
+    ];
+
+    return categories.map((title) {
+      bool progress = wordProgress[title] ?? false;
+      return _buildChapterCard(context, title, progress);
+    }).toList();
   }
 
   Widget _buildInfoBox() {
@@ -72,29 +135,29 @@ class LearningPage extends StatelessWidget {
     );
   }
 
-  Widget _buildChapterCard(BuildContext context, String title, double progress) {
+  Widget _buildChapterCard(BuildContext context, String title, bool isCompleted) {
     String status;
     Color statusColor;
 
-    if (progress == 0.0) {
+    if (!isCompleted) {
       status = '학습 전';
       statusColor = Colors.grey;
-    } else if (progress < 1.0) {
-      status = '학습 중';
-      statusColor = Colors.orange;
     } else {
       status = '학습 완료';
       statusColor = Colors.green;
     }
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        // 상세 페이지로 이동하고, 돌아올 때까지 기다린다.
+        await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => LearningDetailPage(category: title), // ✅ 카테고리 넘기기
+            builder: (_) => LearningDetailPage(category: title),
           ),
         );
+        // 상세 페이지에서 뒤로 돌아오면, 최신 진행도를 다시 불러온다.
+        await fetchProgress();
       },
       child: Container(
         height: 60,

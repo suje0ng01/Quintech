@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../constants/constants.dart';
 import '../state/login_state.dart';
+import '../main.dart'; // 홈 or 로그인 페이지로 이동할 때 필요
 
 class MemberInfoPage extends StatefulWidget {
   const MemberInfoPage({super.key});
@@ -28,8 +29,6 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
 
   Future<void> _saveNickname() async {
     final newNickname = _nicknameController.text.trim();
-
-
     print('현재 토큰: ${_loginState.token}');
 
     try {
@@ -40,9 +39,7 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
           'Accept': 'application/json',
           'Authorization': 'Bearer ${_loginState.token}',
         },
-        body: jsonEncode({
-          'nickname': newNickname,
-        }),
+        body: jsonEncode({'nickname': newNickname}),
       );
 
       print('응답 코드: ${response.statusCode}');
@@ -63,7 +60,66 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('오류 발생: $e')));
     }
+  }
 
+  Future<void> _withdrawUser() async {
+    try {
+      final response = await http.delete(
+        Uri.parse('http://223.130.136.121:8082/api/user/delete'),
+        headers: {
+          'Authorization': 'Bearer ${_loginState.token}',
+        },
+      );
+
+      print('회원 탈퇴 응답: ${response.statusCode}');
+
+      if (!mounted) return; // ✅ 이 한 줄로 해결
+
+
+      if (response.statusCode == 200) {
+        await _loginState.logOut();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('회원 탈퇴가 완료되었습니다.')),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MyApp()),
+              (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('회원 탈퇴 실패')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류 발생: $e')),
+      );
+    }
+  }
+
+  void _confirmWithdraw() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('정말 탈퇴하시겠습니까?'),
+        backgroundColor: Colors.white,
+        content: const Text('회원 탈퇴 시 모든 정보가 삭제됩니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _withdrawUser();
+            },
+            child: const Text('탈퇴', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -74,7 +130,7 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.appbarcolor,
-        title: const Text('회원정보', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('회원정보', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24)),
         centerTitle: true,
       ),
       body: _isLoading
@@ -89,15 +145,32 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
             _buildInfoRow('이메일', email),
             const SizedBox(height: 30),
             Center(
-              child: ElevatedButton(
-                onPressed: _saveNickname,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.yellow[600],
-                  foregroundColor: Colors.black,
-                ),
-                child: const Text('저장'),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _confirmSaveNickname,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.appbarcolor,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        )
+                      ),
+                      child: const Text('저장', style: TextStyle(fontSize: 16,color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: _confirmWithdraw,
+                    child: const Text('회원 탈퇴', style: TextStyle(color: Colors.red)),
+                  ),
+                ],
               ),
             ),
+
           ],
         ),
       ),
@@ -115,6 +188,31 @@ class _MemberInfoPageState extends State<MemberInfoPage> {
       ),
     );
   }
+
+  void _confirmSaveNickname() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('닉네임 변경'),
+        content: const Text('닉네임을 변경하겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _saveNickname();
+            },
+            child: const Text('확인', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildNicknameField() {
     return Padding(
